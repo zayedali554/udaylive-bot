@@ -1,0 +1,27 @@
+{
+  "name": "genius-hub-telegram-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot for Genius Hub video streaming platform admin controls",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js",
+    "dev": "nodemon bot.js"
+  },
+  "dependencies": {
+    "node-telegram-bot-api": "^0.64.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "video",
+    "streaming",
+    "admin"
+  ],
+  "author": "Genius Hub",
+  "license": "MIT"
+}
