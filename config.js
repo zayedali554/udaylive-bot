@@ -1,10 +1,12 @@
+require('dotenv').config();
+
 module.exports = {
   // Telegram Bot Configuration
   BOT_TOKEN: process.env.BOT_TOKEN,
   
-  // Supabase Configuration - Using environment variables directly
+  // Supabase Configuration (Same as main config.js)
   SUPABASE_URL: process.env.SUPABASE_URL,
-  SUPABASE_KEY: process.env.SUPABASE_ANON_KEY,
+  SUPABASE_KEY: process.env.SUPABASE_KEY,
   
   // Admin Configuration
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin123',
