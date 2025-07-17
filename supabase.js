@@ -1,8 +1,20 @@
 const { createClient } = require('@supabase/supabase-js');
-const config = require('./config');
 
-// Initialize Supabase client with same credentials as main app
-const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_KEY);
+// Debug: Log environment variables (without sensitive values)
+console.log('Supabase Config:', {
+  URL: process.env.SUPABASE_URL ? 'SET' : 'MISSING',
+  KEY: process.env.SUPABASE_ANON_KEY ? 'SET' : 'MISSING'
+});
+
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+  console.error('❌ Missing required Supabase environment variables');
+}
+
+// Initialize Supabase client with environment variables
+const supabase = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_ANON_KEY || ''
+);
 
 class SupabaseService {
   constructor() {

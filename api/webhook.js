@@ -1,9 +1,52 @@
 const TelegramBot = require('node-telegram-bot-api');
-const config = require('../config');
-const supabaseService = require('../supabase');
+
+// Debug: Log environment variables (without sensitive values)
+console.log('Environment check:', {
+  BOT_TOKEN: process.env.BOT_TOKEN ? 'SET' : 'MISSING',
+  SUPABASE_URL: process.env.SUPABASE_URL ? 'SET' : 'MISSING', 
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ? 'SET' : 'MISSING',
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  VERCEL: process.env.VERCEL || 'false'
+});
 
 // Initialize bot without polling for webhook mode
-const bot = new TelegramBot(config.BOT_TOKEN);
+const TelegramBot = require('node-telegram-bot-api');
+const config = require('../config');
+
+// Verify required environment variables
+const requiredVars = ['BOT_TOKEN', 'SUPABASE_URL', 'SUPABASE_ANON_KEY'];
+const missingVars = requiredVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+  console.error('❌ Missing required environment variables:', missingVars.join(', '));
+  console.error('Please set these in your Vercel project settings');
+} else {
+  console.log('✅ All required environment variables are set');
+}
+
+// Initialize services
+const supabaseService = require('../supabase');
+
+// Initialize bot with webhook mode (no polling)
+const bot = new TelegramBot(config.BOT_TOKEN, { polling: false });
+
+// Debug: Test Supabase connection
+async function testSupabaseConnection() {
+  try {
+    const { data, error } = await supabaseService.client
+      .from('admin_settings')  // Changed from 'your_table' to 'admin_settings' which should exist
+      .select('*')
+      .limit(1);
+      
+    if (error) throw error;
+    console.log('✅ Supabase connection test successful');
+  } catch (error) {
+    console.error('❌ Supabase connection test failed:', error.message);
+  }
+}
+
+// Run connection test on startup
+testSupabaseConnection();
 
 // Store authenticated admin sessions (in-memory for serverless)
 const adminSessions = new Set();
