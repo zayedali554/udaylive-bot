@@ -5,6 +5,21 @@ const supabaseService = require('./supabase');
 // Initialize bot
 const bot = new TelegramBot(config.BOT_TOKEN, { polling: true });
 
+// Set bot commands menu
+bot.setMyCommands([
+  { command: 'start', description: 'Welcome message and bot info' },
+  { command: 'help', description: 'Show all available commands' },
+  { command: 'login', description: 'Authenticate as admin' },
+  { command: 'status', description: 'Check platform status' },
+  { command: 'get_url', description: 'Get current video URL' },
+  { command: 'get_stats', description: 'Get platform statistics' },
+  { command: 'disablevideo', description: 'Disable video streaming (admin)' },
+  { command: 'enablevideo', description: 'Enable video streaming (admin)' },
+  { command: 'changeurl', description: 'Change video source URL (admin)' },
+  { command: 'togglechat', description: 'Toggle chat on/off (admin)' },
+  { command: 'logout', description: 'Logout from admin session' }
+]);
+
 // Store authenticated admin sessions
 const adminSessions = new Set();
 
@@ -48,10 +63,10 @@ This bot allows you to control your video streaming platform remotely.
 /get_stats - Get platform statistics
 
 *Admin Commands (after login):*
-/disable_video - Disable video streaming
-/enable_video - Enable video streaming  
-/change_url - Change video source URL
-/toggle_chat - Toggle chat on/off
+/disablevideo or /disable_video - Disable video streaming
+/enablevideo or /enable_video - Enable video streaming  
+/changeurl or /change_url - Change video source URL
+/togglechat or /toggle_chat - Toggle chat on/off
 /logout - Logout from admin session
 
 🔐 Use /login to authenticate and access admin features.
@@ -75,13 +90,14 @@ bot.onText(/\/help/, async (msg) => {
 
 *Admin Commands:* (Requires authentication)
 /login <email> <password> - Authenticate as admin
-/disable_video - Disable video streaming
-/enable_video - Enable video streaming
-/change_url <url> - Change video source URL
-/toggle_chat - Toggle chat on/off
+/disablevideo or /disable_video - Disable video streaming
+/enablevideo or /enable_video - Enable video streaming
+/changeurl or /change_url <url> - Change video source URL
+/togglechat or /toggle_chat - Toggle chat on/off
 /logout - Logout from admin session
 
 *Usage Examples:*
+\`/changeurl https://example.com/video.m3u8\`
 \`/change_url https://example.com/video.m3u8\`
 \`/login admin@example.com yourpassword\`
 
@@ -137,7 +153,7 @@ async function performLogin(chatId, email, password) {
       userSessions.delete(chatId); // Clear any pending session
       console.log('Admin login successful for chatId:', chatId);
       console.log('Admin sessions after login:', Array.from(adminSessions));
-      bot.sendMessage(chatId, '✅ Admin login successful!\n\nYou now have access to admin commands:\n• /disablevideo or /disable_video - Disable video streaming\n• /enablevideo or /enable_video - Enable video streaming\n• /changeurl - Change video source\n• /togglechat or /toggle_chat - Toggle chat system\n• /logout - End admin session');
+      bot.sendMessage(chatId, '✅ Admin login successful!\n\nYou now have access to admin commands:\n• /disablevideo or /disable_video - Disable video streaming\n• /enablevideo or /enable_video - Enable video streaming\n• /changeurl or /change_url - Change video source\n• /togglechat or /toggle_chat - Toggle chat system\n• /logout - End admin session');
     } else {
       console.log('Admin login failed for chatId:', chatId, 'Error:', authResult.error);
       bot.sendMessage(chatId, `❌ Authentication failed\n\n${authResult.error || 'Invalid credentials'}. Please try again with /login.`);
