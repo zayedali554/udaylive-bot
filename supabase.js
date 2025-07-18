@@ -237,27 +237,15 @@ class SupabaseService {
   async clearMessages() {
     try {
       await this.performAuthenticatedOperation(async () => {
-        // First get all message IDs, then delete them
-        const { data: messages, error: fetchError } = await this.client
+        // Use a simple delete with a condition that should match all rows
+        const { error } = await this.client
           .from('messages')
-          .select('id');
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all messages (exclude impossible UUID)
 
-        if (fetchError) {
-          console.error('Error fetching messages for deletion:', fetchError);
-          throw fetchError;
-        }
-
-        if (messages && messages.length > 0) {
-          // Delete all messages
-          const { error: deleteError } = await this.client
-            .from('messages')
-            .delete()
-            .in('id', messages.map(msg => msg.id));
-
-          if (deleteError) {
-            console.error('Error deleting messages:', deleteError);
-            throw deleteError;
-          }
+        if (error) {
+          console.error('Error clearing messages:', error);
+          throw error;
         }
       });
 
