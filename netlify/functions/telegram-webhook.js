@@ -301,7 +301,7 @@ This bot allows you to control your video streaming platform remotely.
         console.log('Disable video result:', success);
         
         if (success) {
-          await sendMessage(chatId, '🔴 *Video streaming disabled successfully!*\n\nThe video stream is now offline.\nUse /enablevideo to turn it back on.', { parse_mode: 'Markdown' });
+          await sendMessage(chatId, '🔴 *Video streaming disabled successfully!*\n\nThe video stream is now offline.', { parse_mode: 'Markdown' });
         } else {
           console.error('Failed to disable video - supabase operation returned false');
           await sendMessage(chatId, '❌ *Failed to disable video streaming.*\n\nPlease try again.', { parse_mode: 'Markdown' });
@@ -330,7 +330,7 @@ This bot allows you to control your video streaming platform remotely.
         console.log('Enable video result:', success);
         
         if (success) {
-          await sendMessage(chatId, '🟢 *Video streaming enabled successfully!*\n\nThe video stream is now live.\nUse /disablevideo to turn it off.', { parse_mode: 'Markdown' });
+          await sendMessage(chatId, '🟢 *Video streaming enabled successfully!*\n\nThe video stream is now live.', { parse_mode: 'Markdown' });
         } else {
           console.error('Failed to enable video - supabase operation returned false');
           await sendMessage(chatId, '❌ *Failed to enable video streaming.*\n\nPlease try again.', { parse_mode: 'Markdown' });
