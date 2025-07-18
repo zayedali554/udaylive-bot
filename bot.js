@@ -153,7 +153,7 @@ async function performLogin(chatId, email, password) {
       userSessions.delete(chatId); // Clear any pending session
       console.log('Admin login successful for chatId:', chatId);
       console.log('Admin sessions after login:', Array.from(adminSessions));
-      bot.sendMessage(chatId, '✅ Admin login successful!\n\nYou now have access to admin commands:\n• /disablevideo or /disable_video - Disable video streaming\n• /enablevideo or /enable_video - Enable video streaming\n• /changeurl or /change_url - Change video source\n• /togglechat or /toggle_chat - Toggle chat system\n• /logout - End admin session');
+      bot.sendMessage(chatId, '✅ Admin login successful!\n\nYou now have access to admin commands:\n• /disablevideo or /disable_video - Disable video streaming\n• /enablevideo or /enable_video - Enable video streaming\n• /changeurl or /change_url - Change video source\n• /togglechat or /toggle_chat - Toggle chat system\n• /clearmessages or /clear_messages - Clear all chat messages\n• /logout - End admin session');
     } else {
       console.log('Admin login failed for chatId:', chatId, 'Error:', authResult.error);
       bot.sendMessage(chatId, `❌ Authentication failed\n\n${authResult.error || 'Invalid credentials'}. Please try again with /login.`);
@@ -383,26 +383,7 @@ bot.onText(/\/clear_?messages/, async (msg) => {
     console.log('Clear messages result:', success);
     
     if (success) {
-      const keyboard = {
-        inline_keyboard: [
-          [
-            { text: '🔴 Disable Video', callback_data: 'disable_video' },
-            { text: '🟢 Enable Video', callback_data: 'enable_video' }
-          ],
-          [
-            { text: '💬 Toggle Chat', callback_data: 'toggle_chat' },
-            { text: '🗑️ Clear Messages', callback_data: 'clear_messages' }
-          ],
-          [
-            { text: '📊 Get Stats', callback_data: 'get_stats' },
-            { text: '🔗 Change URL', callback_data: 'change_url' }
-          ]
-        ]
-      };
-      await bot.sendMessage(chatId, '🗑️ *All messages cleared successfully!*\n\nThe chat history has been deleted.', { 
-        parse_mode: 'Markdown',
-        reply_markup: keyboard
-      });
+      await bot.sendMessage(chatId, '🗑️ *All messages cleared successfully!*\n\nThe chat history has been deleted.', { parse_mode: 'Markdown' });
     } else {
       console.error('Failed to clear messages - supabase operation returned false');
       await bot.sendMessage(chatId, '❌ *Failed to clear messages.*\n\nPlease try again.', { parse_mode: 'Markdown' });
