@@ -270,15 +270,19 @@ This bot allows you to control your video streaming platform remotely.
       }
 
       try {
+        console.log('Attempting to disable video streaming...');
         const success = await supabaseService.updateVideoLiveStatus(false);
+        console.log('Disable video result:', success);
         
         if (success) {
           await sendMessage(chatId, '🔴 *Video streaming disabled successfully!*\n\nThe video stream is now offline.\nUse /enablevideo to turn it back on.', { parse_mode: 'Markdown' });
         } else {
+          console.error('Failed to disable video - supabase operation returned false');
           await sendMessage(chatId, '❌ *Failed to disable video streaming.*\n\nPlease try again.', { parse_mode: 'Markdown' });
         }
       } catch (error) {
         console.error('Disable video error:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
         await sendMessage(chatId, '🔥 *Error disabling video streaming.*\n\nPlease try again later.', { parse_mode: 'Markdown' });
       }
       break;
@@ -295,15 +299,19 @@ This bot allows you to control your video streaming platform remotely.
       }
 
       try {
+        console.log('Attempting to enable video streaming...');
         const success = await supabaseService.updateVideoLiveStatus(true);
+        console.log('Enable video result:', success);
         
         if (success) {
           await sendMessage(chatId, '🟢 *Video streaming enabled successfully!*\n\nThe video stream is now live.\nUse /disablevideo to turn it off.', { parse_mode: 'Markdown' });
         } else {
+          console.error('Failed to enable video - supabase operation returned false');
           await sendMessage(chatId, '❌ *Failed to enable video streaming.*\n\nPlease try again.', { parse_mode: 'Markdown' });
         }
       } catch (error) {
         console.error('Enable video error:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
         await sendMessage(chatId, '🔥 *Error enabling video streaming.*\n\nPlease try again later.', { parse_mode: 'Markdown' });
       }
       break;
@@ -435,6 +443,14 @@ async function handleInteractiveSession(msg) {
 // Main webhook handler
 exports.handler = async (event, context) => {
   console.log('Webhook received:', JSON.stringify(event, null, 2));
+  
+  // Debug: Check environment variables
+  console.log('Environment check:');
+  console.log('BOT_TOKEN exists:', !!process.env.BOT_TOKEN);
+  console.log('SUPABASE_URL exists:', !!process.env.SUPABASE_URL);
+  console.log('SUPABASE_KEY exists:', !!process.env.SUPABASE_KEY);
+  console.log('SUPABASE_URL value:', process.env.SUPABASE_URL?.substring(0, 30) + '...');
+  console.log('SUPABASE_KEY value:', process.env.SUPABASE_KEY?.substring(0, 20) + '...');
 
   // Handle preflight requests
   if (event.httpMethod === 'OPTIONS') {
