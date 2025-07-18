@@ -5,7 +5,11 @@
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js",
-    "dev": "nodemon bot.js"
+    "dev": "nodemon bot.js",
+    "netlify:dev": "netlify dev",
+    "webhook:set": "node setup-webhook.js set",
+    "webhook:info": "node setup-webhook.js info",
+    "webhook:delete": "node setup-webhook.js delete"
   },
   "dependencies": {
     "node-telegram-bot-api": "^0.64.0",
@@ -13,7 +17,8 @@
     "dotenv": "^16.3.1"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "netlify-cli": "^17.0.0"
   },
   "keywords": [
     "telegram",

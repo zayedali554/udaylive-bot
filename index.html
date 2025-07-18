@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genius Hub Telegram Bot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            color: #4a5568;
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #718096;
+            margin-bottom: 2rem;
+            font-size: 1.2rem;
+            line-height: 1.6;
+        }
+
+        .status {
+            background: #f7fafc;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin: 2rem 0;
+            border-left: 5px solid #48bb78;
+        }
+
+        .status h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .status-value {
+            color: #48bb78;
+            font-weight: 700;
+        }
+
+        .webhook-info {
+            background: #edf2f7;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin: 2rem 0;
+            text-align: left;
+        }
+
+        .webhook-info h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .webhook-url {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+            margin: 1rem 0;
+        }
+
+        .commands {
+            background: #f7fafc;
+            padding: 1.5rem;
+            border-radius: 15px;
+            margin: 2rem 0;
+            text-align: left;
+        }
+
+        .commands h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .command-list {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .command-item {
+            background: white;
+            padding: 0.8rem;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .command-name {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: #4c51bf;
+        }
+
+        .command-desc {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        .footer {
+            margin-top: 2rem;
+            color: #a0aec0;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.8rem 2rem;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 0.5rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .command-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🤖</div>
+        <h1>Genius Hub Bot</h1>
+        <p class="subtitle">
+            Your Telegram bot is now running on Netlify! 
+            <br>Serverless, scalable, and always available.
+        </p>
+
+        <div class="status">
+            <h3>🟢 Bot Status</h3>
+            <div class="status-item">
+                <span class="status-label">Deployment</span>
+                <span class="status-value">✅ Active</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Webhook</span>
+                <span class="status-value">✅ Ready</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Database</span>
+                <span class="status-value">✅ Connected</span>
+            </div>
+        </div>
+
+        <div class="webhook-info">
+            <h3>🔗 Webhook Configuration</h3>
+            <p>Set this URL as your Telegram bot webhook:</p>
+            <div class="webhook-url" id="webhookUrl">
+                https://your-site-name.netlify.app/.netlify/functions/telegram-webhook
+            </div>
+            <p><strong>Note:</strong> Replace "your-site-name" with your actual Netlify site name after deployment.</p>
+        </div>
+
+        <div class="commands">
+            <h3>📋 Available Commands</h3>
+            <div class="command-list">
+                <div class="command-item">
+                    <span class="command-name">/start</span>
+                    <span class="command-desc">Welcome message and bot info</span>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/help</span>
+                    <span class="command-desc">Show all available commands</span>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/login</span>
+                    <span class="command-desc">Authenticate as admin</span>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/status</span>
+                    <span class="command-desc">Check platform status</span>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/get_url</span>
+                    <span class="command-desc">Get current video URL</span>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/get_stats</span>
+                    <span class="command-desc">Get platform statistics</span>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/disablevideo</span>
+                    <span class="command-desc">Disable video streaming (admin)</span>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/enablevideo</span>
+                    <span class="command-desc">Enable video streaming (admin)</span>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/changeurl</span>
+                    <span class="command-desc">Change video source URL (admin)</span>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/togglechat</span>
+                    <span class="command-desc">Toggle chat on/off (admin)</span>
+                </div>
+                <div class="command-item">
+                    <span class="command-name">/logout</span>
+                    <span class="command-desc">Logout from admin session</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🚀 Powered by Netlify Functions</p>
+            <p>Built with ❤️ for Genius Hub</p>
+        </div>
+    </div>
+
+    <script>
+        // Update webhook URL with current domain
+        document.addEventListener('DOMContentLoaded', function() {
+            const webhookUrlElement = document.getElementById('webhookUrl');
+            const currentDomain = window.location.origin;
+            webhookUrlElement.textContent = `${currentDomain}/.netlify/functions/telegram-webhook`;
+        });
+    </script>
+</body>
+</html>
