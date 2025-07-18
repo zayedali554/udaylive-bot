@@ -384,7 +384,26 @@ This bot allows you to control your video streaming platform remotely.
         console.log('Clear messages result:', success);
         
         if (success) {
-          await sendMessage(chatId, '🗑️ *All messages cleared successfully!*\n\nThe chat history has been deleted.', { parse_mode: 'Markdown' });
+          const keyboard = {
+            inline_keyboard: [
+              [
+                { text: '🔴 Disable Video', callback_data: 'disable_video' },
+                { text: '🟢 Enable Video', callback_data: 'enable_video' }
+              ],
+              [
+                { text: '💬 Toggle Chat', callback_data: 'toggle_chat' },
+                { text: '🗑️ Clear Messages', callback_data: 'clear_messages' }
+              ],
+              [
+                { text: '📊 Get Stats', callback_data: 'get_stats' },
+                { text: '🔗 Change URL', callback_data: 'change_url' }
+              ]
+            ]
+          };
+          await sendMessage(chatId, '🗑️ *All messages cleared successfully!*\n\nThe chat history has been deleted.', { 
+            parse_mode: 'Markdown',
+            reply_markup: keyboard
+          });
         } else {
           console.error('Failed to clear messages - supabase operation returned false');
           await sendMessage(chatId, '❌ *Failed to clear messages.*\n\nPlease try again.', { parse_mode: 'Markdown' });

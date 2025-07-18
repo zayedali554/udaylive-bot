@@ -383,7 +383,26 @@ bot.onText(/\/clear_?messages/, async (msg) => {
     console.log('Clear messages result:', success);
     
     if (success) {
-      await bot.sendMessage(chatId, '🗑️ *All messages cleared successfully!*\n\nThe chat history has been deleted.', { parse_mode: 'Markdown' });
+      const keyboard = {
+        inline_keyboard: [
+          [
+            { text: '🔴 Disable Video', callback_data: 'disable_video' },
+            { text: '🟢 Enable Video', callback_data: 'enable_video' }
+          ],
+          [
+            { text: '💬 Toggle Chat', callback_data: 'toggle_chat' },
+            { text: '🗑️ Clear Messages', callback_data: 'clear_messages' }
+          ],
+          [
+            { text: '📊 Get Stats', callback_data: 'get_stats' },
+            { text: '🔗 Change URL', callback_data: 'change_url' }
+          ]
+        ]
+      };
+      await bot.sendMessage(chatId, '🗑️ *All messages cleared successfully!*\n\nThe chat history has been deleted.', { 
+        parse_mode: 'Markdown',
+        reply_markup: keyboard
+      });
     } else {
       console.error('Failed to clear messages - supabase operation returned false');
       await bot.sendMessage(chatId, '❌ *Failed to clear messages.*\n\nPlease try again.', { parse_mode: 'Markdown' });
@@ -493,6 +512,49 @@ bot.on('message', async (msg) => {
       // Unknown state, clear session
       userSessions.delete(chatId);
       break;
+  }
+});
+
+// Handle callback queries (inline keyboard button clicks)
+bot.on('callback_query', async (callbackQuery) => {
+  const chatId = callbackQuery.message.chat.id;
+  const data = callbackQuery.data;
+  
+  console.log('Callback query received:', {
+    chatId: chatId,
+    data: data,
+    from: callbackQuery.from.username || callbackQuery.from.first_name
+  });
+  
+  // Answer the callback query to remove loading state
+  await bot.answerCallbackQuery(callbackQuery.id);
+  
+  // Create a fake message object to reuse existing command handlers
+  const fakeMsg = {
+    chat: { id: chatId },
+    text: '/' + data,
+    from: callbackQuery.from
+  };
+  
+  // Handle the callback data as a command by triggering the appropriate regex handlers
+  if (data === 'disable_video') {
+    fakeMsg.text = '/disable_video';
+    bot.emit('text', fakeMsg);
+  } else if (data === 'enable_video') {
+    fakeMsg.text = '/enable_video';
+    bot.emit('text', fakeMsg);
+  } else if (data === 'toggle_chat') {
+    fakeMsg.text = '/toggle_chat';
+    bot.emit('text', fakeMsg);
+  } else if (data === 'clear_messages') {
+    fakeMsg.text = '/clear_messages';
+    bot.emit('text', fakeMsg);
+  } else if (data === 'get_stats') {
+    fakeMsg.text = '/get_stats';
+    bot.emit('text', fakeMsg);
+  } else if (data === 'change_url') {
+    fakeMsg.text = '/change_url';
+    bot.emit('text', fakeMsg);
   }
 });
 

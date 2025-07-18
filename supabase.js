@@ -240,7 +240,7 @@ class SupabaseService {
         const { error } = await this.client
           .from('messages')
           .delete()
-          .neq('id', 0); // Delete all messages
+          .gte('created_at', '1970-01-01'); // Delete all messages using timestamp
 
         if (error) {
           console.error('Error clearing messages:', error);
