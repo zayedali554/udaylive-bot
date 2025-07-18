@@ -368,6 +368,34 @@ This bot allows you to control your video streaming platform remotely.
       }
       break;
 
+    case '/clear_messages':
+    case '/clearmessages':
+      console.log('Clear messages command received from chatId:', chatId);
+      
+      if (!isAdminAuthenticated(chatId)) {
+        console.log('User not authenticated, sending auth required message');
+        await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
+        return;
+      }
+
+      try {
+        console.log('Attempting to clear all messages...');
+        const success = await supabaseService.clearMessages();
+        console.log('Clear messages result:', success);
+        
+        if (success) {
+          await sendMessage(chatId, '🗑️ *All messages cleared successfully!*\n\nThe chat history has been deleted.', { parse_mode: 'Markdown' });
+        } else {
+          console.error('Failed to clear messages - supabase operation returned false');
+          await sendMessage(chatId, '❌ *Failed to clear messages.*\n\nPlease try again.', { parse_mode: 'Markdown' });
+        }
+      } catch (error) {
+        console.error('Clear messages error:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        await sendMessage(chatId, '🔥 *Error clearing messages.*\n\nPlease try again later.', { parse_mode: 'Markdown' });
+      }
+      break;
+
     case '/toggle_chat':
     case '/togglechat':
       console.log('Toggle chat command received from chatId:', chatId);

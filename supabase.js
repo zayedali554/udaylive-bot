@@ -233,6 +233,28 @@ class SupabaseService {
     }
   }
 
+  // Clear all messages
+  async clearMessages() {
+    try {
+      await this.performAuthenticatedOperation(async () => {
+        const { error } = await this.client
+          .from('messages')
+          .delete()
+          .neq('id', 0); // Delete all messages
+
+        if (error) {
+          console.error('Error clearing messages:', error);
+          throw error;
+        }
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Clear messages error:', error);
+      return false;
+    }
+  }
+
   // Get platform statistics
   async getPlatformStats() {
     try {

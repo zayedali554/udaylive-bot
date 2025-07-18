@@ -365,6 +365,36 @@ async function performUrlChange(chatId, newUrl) {
   }
 }
 
+// Clear messages command (admin only)
+bot.onText(/\/clear_?messages/, async (msg) => {
+  const chatId = msg.chat.id;
+  console.log('Clear messages command received from chatId:', chatId);
+  console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
+
+  if (!isAdminAuthenticated(chatId)) {
+    console.log('User not authenticated, sending auth required message');
+    await bot.sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
+    return;
+  }
+
+  try {
+    console.log('Attempting to clear all messages...');
+    const success = await supabaseService.clearMessages();
+    console.log('Clear messages result:', success);
+    
+    if (success) {
+      await bot.sendMessage(chatId, '🗑️ *All messages cleared successfully!*\n\nThe chat history has been deleted.', { parse_mode: 'Markdown' });
+    } else {
+      console.error('Failed to clear messages - supabase operation returned false');
+      await bot.sendMessage(chatId, '❌ *Failed to clear messages.*\n\nPlease try again.', { parse_mode: 'Markdown' });
+    }
+  } catch (error) {
+    console.error('Clear messages error:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    await bot.sendMessage(chatId, '🔥 *Error clearing messages.*\n\nPlease try again later.', { parse_mode: 'Markdown' });
+  }
+});
+
 // Toggle chat command (admin only)
 bot.onText(/\/toggle_?chat/, async (msg) => {
   const chatId = msg.chat.id;

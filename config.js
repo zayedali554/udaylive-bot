@@ -26,6 +26,7 @@ module.exports = {
     ENABLE_VIDEO: '/enable_video',
     CHANGE_URL: '/change_url',
     GET_URL: '/get_url',
+    CLEAR_MESSAGES: '/clear_messages',
     TOGGLE_CHAT: '/toggle_chat',
     GET_STATS: '/get_stats'
   }

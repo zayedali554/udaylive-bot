@@ -97,6 +97,7 @@ The bot uses the same Supabase authentication system as the admin panel. To acce
 | `/disable_video` | Admin | Disable video streaming |
 | `/enable_video` | Admin | Enable video streaming |
 | `/change_url` | Admin | Change video source |
+| `/clear_messages` | Admin | Clear all chat messages |
 | `/toggle_chat` | Admin | Toggle chat system |
 | `/logout` | Admin | End admin session |
 
