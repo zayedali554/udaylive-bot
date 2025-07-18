@@ -66,7 +66,30 @@ async function performLogin(chatId, email, password) {
     
     if (result.success) {
       adminSessions.add(chatId);
-      await sendMessage(chatId, '✅ *Login successful!*\n\nYou are now authenticated as admin.\nUse admin commands to control the platform.', { parse_mode: 'Markdown' });
+      
+      const adminKeyboard = {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '🔴 Disable Video', callback_data: 'disable_video' },
+              { text: '🟢 Enable Video', callback_data: 'enable_video' }
+            ],
+            [
+              { text: '🔗 Change URL', callback_data: 'change_url' },
+              { text: '💬 Toggle Chat', callback_data: 'toggle_chat' }
+            ],
+            [
+              { text: '📊 Platform Status', callback_data: 'status' },
+              { text: '📈 Statistics', callback_data: 'get_stats' }
+            ],
+            [
+              { text: '🚪 Logout', callback_data: 'logout' }
+            ]
+          ]
+        }
+      };
+      
+      await sendMessage(chatId, '✅ *Login successful!*\n\nYou are now authenticated as admin.\n\n👇 *Choose an admin action:*', adminKeyboard);
     } else {
       await sendMessage(chatId, `❌ *Login failed.*\n\n${result.error || 'Invalid credentials'}\n\nPlease try again with /login`, { parse_mode: 'Markdown' });
     }
@@ -103,28 +126,31 @@ async function handleCommand(msg) {
 
   switch (command) {
     case '/start':
-      const welcomeMessage = `
-🎬 *Welcome to Genius Hub Admin Bot!*
+      const welcomeMessage = `🎬 *Welcome to Genius Hub Admin Bot!*
 
 This bot allows you to control your video streaming platform remotely.
 
-*Available Commands:*
-/help - Show all commands
-/login - Authenticate as admin
-/status - Check platform status
-/get_url - Get current video URL
-/get_stats - Get platform statistics
-
-*Admin Commands (after login):*
-/disablevideo or /disable_video - Disable video streaming
-/enablevideo or /enable_video - Enable video streaming  
-/changeurl or /change_url - Change video source URL
-/togglechat or /toggle_chat - Toggle chat on/off
-/logout - Logout from admin session
-
-🔐 Use /login to authenticate and access admin features.
-      `;
-      await sendMessage(chatId, welcomeMessage);
+👇 *Choose an option below:*`;
+      
+      const startKeyboard = {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '📊 Platform Status', callback_data: 'status' },
+              { text: '🔗 Get Video URL', callback_data: 'get_url' }
+            ],
+            [
+              { text: '📈 Statistics', callback_data: 'get_stats' },
+              { text: '🔐 Admin Login', callback_data: 'login' }
+            ],
+            [
+              { text: '❓ Help & Commands', callback_data: 'help' }
+            ]
+          ]
+        }
+      };
+      
+      await sendMessage(chatId, welcomeMessage, startKeyboard);
       break;
 
     case '/help':
@@ -487,6 +513,35 @@ exports.handler = async (event, context) => {
       });
 
       await handleCommand(msg);
+    }
+    
+    // Handle callback queries (button clicks)
+    if (update.callback_query) {
+      const callbackQuery = update.callback_query;
+      const chatId = callbackQuery.message.chat.id;
+      const data = callbackQuery.data;
+      
+      console.log('Callback query received:', {
+        chatId: chatId,
+        data: data,
+        from: callbackQuery.from.username || callbackQuery.from.first_name
+      });
+      
+      // Answer the callback query to remove loading state
+      await fetch(`https://api.telegram.org/bot${config.BOT_TOKEN}/answerCallbackQuery`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ callback_query_id: callbackQuery.id })
+      });
+      
+      // Handle the callback data as a command
+      const fakeMsg = {
+        chat: { id: chatId },
+        text: '/' + data,
+        from: callbackQuery.from
+      };
+      
+      await handleCommand(fakeMsg);
     }
 
     return {
