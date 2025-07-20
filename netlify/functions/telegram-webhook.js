@@ -213,7 +213,7 @@ This bot allows you to control your video streaming platform remotely.
       break;
 
     case '/login':
-      if (text.trim() === '/login') {
+      if (msg.text.trim() === '/login') {
         // Interactive login
         if (isAdminAuthenticated(chatId)) {
           await sendMessage(chatId, '✅ You are already logged in as admin.\n\nUse /logout to end your session first.');
@@ -228,7 +228,7 @@ This bot allows you to control your video streaming platform remotely.
           return;
         }
 
-        const args = text.substring(7).trim();
+        const args = msg.text.substring(7).trim();
         const parts = args.split(' ');
 
         if (parts.length < 2) {
