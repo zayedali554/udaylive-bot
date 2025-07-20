@@ -148,6 +148,12 @@ async function handleCommand(msg) {
   // Check if the text matches a button text and convert to command
   if (buttonTextMap[text]) {
     command = buttonTextMap[text];
+    // For login button, ensure it triggers interactive login
+    if (text === '🔐 Admin Login') {
+      command = '/login';
+      // Override the text to ensure interactive login is triggered
+      msg.text = '/login';
+    }
   }
 
   console.log('Processing command:', command, 'from chatId:', chatId);
