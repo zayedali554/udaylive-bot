@@ -187,29 +187,34 @@ This bot allows you to control your video streaming platform remotely.
 
     case '/help':
       const helpMessage = `
-📋 *Genius Hub Admin Bot Commands*
+🤖 *Genius Hub Bot - Command Guide*
 
-*Public Commands:*
-/start - Welcome message
-/help - Show this help
-/status - Check platform status
-/get_url - Get current video URL
-/get_stats - Get platform statistics
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-*Admin Commands:* (Requires authentication)
-/login <email> <password> - Authenticate as admin
-/disablevideo or /disable_video - Disable video streaming
-/enablevideo or /enable_video - Enable video streaming
-/changeurl or /change_url <url> - Change video source URL
-/togglechat or /toggle_chat - Toggle chat on/off
-/logout - Logout from admin session
+🌐 **PUBLIC COMMANDS**
+┣ /start - Welcome & bot introduction
+┣ /help - Show this command guide
+┣ /status - Check platform status
+┣ /get_url - Get current video URL
+┗ /get_stats - Platform statistics
 
-*Usage Examples:*
-\`/changeurl https://example.com/video.m3u8\`
-\`/change_url https://example.com/video.m3u8\`
-\`/login admin@example.com yourpassword\`
+🔐 **ADMIN COMMANDS** *(Login Required)*
+┣ /login - Interactive admin authentication
+┣ /disable_video - Turn off video streaming
+┣ /enable_video - Turn on video streaming
+┣ /change_url - Update video source URL
+┣ /toggle_chat - Enable/disable chat system
+┣ /clear_messages - Clear all chat messages
+┗ /logout - End admin session
 
-🔐 Admin authentication required for control commands.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 **Quick Start:**
+1️⃣ Use /login to authenticate as admin
+2️⃣ Control your platform remotely
+3️⃣ Use /logout when finished
+
+🔒 *Secure admin access required for control features*
       `;
       await sendMessage(chatId, helpMessage);
       break;
