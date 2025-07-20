@@ -14,6 +14,27 @@ const SESSION_STATES = {
   WAITING_URL: 'waiting_url'
 };
 
+// Activity logging function
+async function logActivity(type, user, command, message, status = 'success') {
+  try {
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      type, // 'command', 'message', 'error', 'warning', 'info'
+      user,
+      command,
+      message,
+      status
+    };
+    
+    // Store in Supabase for persistence (optional)
+    await supabaseService.logBotActivity(logEntry);
+    
+    console.log('Bot Activity Log:', logEntry);
+  } catch (error) {
+    console.error('Error logging activity:', error);
+  }
+}
+
 // Utility function to check if user is authenticated admin
 function isAdminAuthenticated(chatId) {
   return adminSessions.has(chatId);
@@ -78,6 +99,9 @@ async function performLogin(chatId, email, password) {
     if (result.success) {
       adminSessions.add(chatId);
       
+      // Log successful login
+      await logActivity('command', email, '/login', 'Admin login successful', 'success');
+      
       const adminKeyboard = createReplyKeyboard([
         [
           { text: '🔴 Disable Video' },
@@ -102,10 +126,13 @@ async function performLogin(chatId, email, password) {
       
       await sendMessage(chatId, '✅ *Login successful!*\n\nYou are now authenticated as admin.\n\n👇 *Choose an admin action:*', adminKeyboard);
     } else {
+      // Log failed login
+      await logActivity('error', email, '/login', 'Login failed - Invalid credentials', 'error');
       await sendMessage(chatId, `❌ *Login failed.*\n\n${result.error || 'Invalid credentials'}\n\nPlease try again with /login`, { parse_mode: 'Markdown' });
     }
   } catch (error) {
     console.error('Login error:', error);
+    await logActivity('error', 'unknown', '/login', `Login error: ${error.message}`, 'error');
     await sendMessage(chatId, '🔥 *Error during login.*\n\nPlease try again later.', { parse_mode: 'Markdown' });
   }
 }
@@ -117,12 +144,15 @@ async function performUrlChange(chatId, newUrl) {
     const success = await supabaseService.updateVideoSource(newUrl);
     
     if (success) {
+      await logActivity('command', 'admin', '/changeurl', `Video URL updated to: ${newUrl}`, 'success');
       await sendMessage(chatId, `✅ *Video URL updated successfully!*\n\n🔗 *New URL:* ${newUrl}\n\nThe video source has been changed.`, { parse_mode: 'Markdown' });
     } else {
+      await logActivity('error', 'admin', '/changeurl', 'Failed to update video URL', 'error');
       await sendMessage(chatId, '❌ *Failed to update video URL.*\n\nPlease try again.', { parse_mode: 'Markdown' });
     }
   } catch (error) {
     console.error('URL change error:', error);
+    await logActivity('error', 'admin', '/changeurl', `URL change error: ${error.message}`, 'error');
     await sendMessage(chatId, '🔥 *Error updating video URL.*\n\nPlease try again later.', { parse_mode: 'Markdown' });
   }
 }
@@ -166,6 +196,12 @@ async function handleCommand(msg) {
   }
 
   console.log('Processing command:', command, 'from chatId:', chatId);
+  
+  // Get user info for logging
+  const username = msg.from?.username || msg.from?.first_name || 'unknown';
+  
+  // Log command received
+  await logActivity('command', username, command, `Command received from ${username}`, 'info');
 
   switch (command) {
     case '/start':
@@ -183,6 +219,7 @@ This bot allows you to control your video streaming platform remotely.
       ]);
       
       await sendMessage(chatId, welcomeMessage, startKeyboard);
+      await logActivity('command', username, '/start', 'Welcome message sent', 'success');
       break;
 
     case '/help':
@@ -212,6 +249,7 @@ This bot allows you to control your video streaming platform remotely.
 🔐 Admin authentication required for control commands.
       `;
       await sendMessage(chatId, helpMessage);
+      await logActivity('command', username, '/help', 'Help message sent', 'success');
       break;
 
     case '/login':
@@ -249,8 +287,10 @@ This bot allows you to control your video streaming platform remotely.
         adminSessions.delete(chatId);
         supabaseService.clearAdminCredentials();
         await sendMessage(chatId, '👋 *Logged out successfully!*\n\nYour admin session has been ended.\nUse /login to authenticate again.', { parse_mode: 'Markdown' });
+        await logActivity('command', username, '/logout', 'Admin logged out successfully', 'success');
       } else {
         await sendMessage(chatId, '❌ You are not currently logged in.\n\nUse /login to authenticate first.');
+        await logActivity('warning', username, '/logout', 'Logout attempt without authentication', 'warning');
       }
       break;
 
@@ -275,8 +315,10 @@ This bot allows you to control your video streaming platform remotely.
         `;
 
         await sendMessage(chatId, statusMessage, { parse_mode: 'Markdown' });
+        await logActivity('command', username, '/status', 'Platform status retrieved', 'success');
       } catch (error) {
         console.error('Status error:', error);
+        await logActivity('error', username, '/status', `Status error: ${error.message}`, 'error');
         await sendMessage(chatId, '🔥 *Error fetching platform status.*\n\nPlease try again later.', { parse_mode: 'Markdown' });
       }
       break;
@@ -334,13 +376,16 @@ This bot allows you to control your video streaming platform remotely.
         
         if (success) {
           await sendMessage(chatId, '🔴 *Video streaming disabled successfully!*\n\nThe video stream is now offline.', { parse_mode: 'Markdown' });
+          await logActivity('command', username, '/disable_video', 'Video streaming disabled', 'success');
         } else {
           console.error('Failed to disable video - supabase operation returned false');
+          await logActivity('error', username, '/disable_video', 'Failed to disable video streaming', 'error');
           await sendMessage(chatId, '❌ *Failed to disable video streaming.*\n\nPlease try again.', { parse_mode: 'Markdown' });
         }
       } catch (error) {
         console.error('Disable video error:', error);
         console.error('Error details:', JSON.stringify(error, null, 2));
+        await logActivity('error', username, '/disable_video', `Disable video error: ${error.message}`, 'error');
         await sendMessage(chatId, '🔥 *Error disabling video streaming.*\n\nPlease try again later.', { parse_mode: 'Markdown' });
       }
       break;
@@ -363,13 +408,16 @@ This bot allows you to control your video streaming platform remotely.
         
         if (success) {
           await sendMessage(chatId, '🟢 *Video streaming enabled successfully!*\n\nThe video stream is now live.', { parse_mode: 'Markdown' });
+          await logActivity('command', username, '/enable_video', 'Video streaming enabled', 'success');
         } else {
           console.error('Failed to enable video - supabase operation returned false');
+          await logActivity('error', username, '/enable_video', 'Failed to enable video streaming', 'error');
           await sendMessage(chatId, '❌ *Failed to enable video streaming.*\n\nPlease try again.', { parse_mode: 'Markdown' });
         }
       } catch (error) {
         console.error('Enable video error:', error);
         console.error('Error details:', JSON.stringify(error, null, 2));
+        await logActivity('error', username, '/enable_video', `Enable video error: ${error.message}`, 'error');
         await sendMessage(chatId, '🔥 *Error enabling video streaming.*\n\nPlease try again later.', { parse_mode: 'Markdown' });
       }
       break;
@@ -417,13 +465,16 @@ This bot allows you to control your video streaming platform remotely.
         
         if (success) {
           await sendMessage(chatId, '🗑️ *All messages cleared successfully!*\n\nThe chat history has been deleted.', { parse_mode: 'Markdown' });
+          await logActivity('command', username, '/clear_messages', 'All chat messages cleared', 'success');
         } else {
           console.error('Failed to clear messages - supabase operation returned false');
+          await logActivity('error', username, '/clear_messages', 'Failed to clear messages', 'error');
           await sendMessage(chatId, '❌ *Failed to clear messages.*\n\nPlease try again.', { parse_mode: 'Markdown' });
         }
       } catch (error) {
         console.error('Clear messages error:', error);
         console.error('Error details:', JSON.stringify(error, null, 2));
+        await logActivity('error', username, '/clear_messages', `Clear messages error: ${error.message}`, 'error');
         await sendMessage(chatId, '🔥 *Error clearing messages.*\n\nPlease try again later.', { parse_mode: 'Markdown' });
       }
       break;
@@ -447,11 +498,14 @@ This bot allows you to control your video streaming platform remotely.
         if (success) {
           const statusText = newStatus ? '🟢 Enabled' : '🔴 Disabled';
           await sendMessage(chatId, `💬 Chat system ${statusText.toLowerCase()} successfully!\n\nStatus: ${statusText}`);
+          await logActivity('command', username, '/toggle_chat', `Chat system ${statusText.toLowerCase()}`, 'success');
         } else {
+          await logActivity('error', username, '/toggle_chat', 'Failed to toggle chat status', 'error');
           await sendMessage(chatId, '❌ Failed to toggle chat status.\n\nPlease try again.');
         }
       } catch (error) {
         console.error('Toggle chat error:', error);
+        await logActivity('error', username, '/toggle_chat', `Toggle chat error: ${error.message}`, 'error');
         await sendMessage(chatId, '🔥 Error toggling chat status.\n\nPlease try again later.');
       }
       break;

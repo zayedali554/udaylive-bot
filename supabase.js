@@ -294,6 +294,55 @@ class SupabaseService {
       };
     }
   }
+
+  // Log bot activity for the admin panel
+  async logBotActivity(logEntry) {
+    try {
+      // Store in bot_activity table (create if doesn't exist)
+      const { data, error } = await this.client
+        .from('bot_activity')
+        .insert({
+          timestamp: logEntry.timestamp,
+          type: logEntry.type,
+          user: logEntry.user,
+          command: logEntry.command,
+          message: logEntry.message,
+          status: logEntry.status,
+          created_at: new Date().toISOString()
+        });
+
+      if (error) {
+        console.error('Error logging bot activity:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Log bot activity error:', error);
+      return false;
+    }
+  }
+
+  // Get recent bot activity logs
+  async getBotActivityLogs(limit = 50) {
+    try {
+      const { data, error } = await this.client
+        .from('bot_activity')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error('Error fetching bot activity logs:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Get bot activity logs error:', error);
+      return [];
+    }
+  }
 }
 
 module.exports = new SupabaseService();
