@@ -19,23 +19,11 @@ function isAdminAuthenticated(chatId) {
   return adminSessions.has(chatId);
 }
 
-// Utility function to create reply keyboard (appears below text input)
-function createReplyKeyboard(buttons, oneTime = true) {
+// Utility function to create inline keyboard
+function createInlineKeyboard(buttons) {
   return {
     reply_markup: {
-      keyboard: buttons,
-      resize_keyboard: true,
-      one_time_keyboard: oneTime,
-      selective: true
-    }
-  };
-}
-
-// Utility function to remove keyboard
-function removeKeyboard() {
-  return {
-    reply_markup: {
-      remove_keyboard: true
+      inline_keyboard: buttons
     }
   };
 }
@@ -79,24 +67,28 @@ async function performLogin(chatId, email, password) {
     if (result.success) {
       adminSessions.add(chatId);
       
-      const adminKeyboard = createReplyKeyboard([
-        [
-          { text: '🔴 Disable Video' },
-          { text: '🟢 Enable Video' }
-        ],
-        [
-          { text: '🔗 Change URL' },
-          { text: '💬 Toggle Chat' }
-        ],
-        [
-          { text: '🗑️ Clear Messages' },
-          { text: '📊 Platform Status' }
-        ],
-        [
-          { text: '📈 Statistics' },
-          { text: '🚪 Logout' }
-        ]
-      ], false);
+      const adminKeyboard = {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '🔴 Disable Video', callback_data: 'disable_video' },
+              { text: '🟢 Enable Video', callback_data: 'enable_video' }
+            ],
+            [
+              { text: '🔗 Change URL', callback_data: 'change_url' },
+              { text: '💬 Toggle Chat', callback_data: 'toggle_chat' }
+            ],
+            [
+              { text: '🗑️ Clear Messages', callback_data: 'clear_messages' },
+              { text: '📊 Platform Status', callback_data: 'status' }
+            ],
+            [
+              { text: '📈 Statistics', callback_data: 'get_stats' },
+              { text: '🚪 Logout', callback_data: 'logout' }
+            ]
+          ]
+        }
+      };
       
       await sendMessage(chatId, '✅ *Login successful!*\n\nYou are now authenticated as admin.\n\n👇 *Choose an admin action:*', adminKeyboard);
     } else {
@@ -114,30 +106,10 @@ async function performUrlChange(chatId, newUrl) {
     console.log('Attempting URL change to:', newUrl);
     const success = await supabaseService.updateVideoSource(newUrl);
     
-    // Restore admin keyboard after URL change
-    const adminKeyboard = createReplyKeyboard([
-      [
-        { text: '🔴 Disable Video' },
-        { text: '🟢 Enable Video' }
-      ],
-      [
-        { text: '🔗 Change URL' },
-        { text: '💬 Toggle Chat' }
-      ],
-      [
-        { text: '🗑️ Clear Messages' },
-        { text: '📊 Platform Status' }
-      ],
-      [
-        { text: '📈 Statistics' },
-        { text: '🚪 Logout' }
-      ]
-    ], false);
-    
     if (success) {
-      await sendMessage(chatId, `✅ *Video URL updated successfully!*\n\n🔗 *New URL:* ${newUrl}\n\nThe video source has been changed.`, { parse_mode: 'Markdown', ...adminKeyboard });
+      await sendMessage(chatId, `✅ *Video URL updated successfully!*\n\n🔗 *New URL:* ${newUrl}\n\nThe video source has been changed.`, { parse_mode: 'Markdown' });
     } else {
-      await sendMessage(chatId, '❌ *Failed to update video URL.*\n\nPlease try again.', { parse_mode: 'Markdown', ...adminKeyboard });
+      await sendMessage(chatId, '❌ *Failed to update video URL.*\n\nPlease try again.', { parse_mode: 'Markdown' });
     }
   } catch (error) {
     console.error('URL change error:', error);
@@ -153,62 +125,32 @@ async function handleCommand(msg) {
 
   console.log('Processing command:', command, 'from chatId:', chatId);
 
-  // Handle reply keyboard button presses
-  if (text && !text.startsWith('/')) {
-    // Map button text to commands
-    const buttonCommands = {
-      '🔴 Disable Video': '/disable_video',
-      '🟢 Enable Video': '/enable_video',
-      '🔗 Change URL': '/change_url',
-      '💬 Toggle Chat': '/toggle_chat',
-      '🗑️ Clear Messages': '/clear_messages',
-      '📊 Platform Status': '/status',
-      '📈 Statistics': '/get_stats',
-      '🚪 Logout': '/logout'
-    };
-
-    if (buttonCommands[text]) {
-      // Create a fake message with the corresponding command
-      const fakeMsg = {
-        ...msg,
-        text: buttonCommands[text]
-      };
-      return await handleCommand(fakeMsg);
-    }
-    
-    // If not a button command, handle as interactive session
-    return await handleInteractiveSession(msg);
-  }
-
   switch (command) {
     case '/start':
-      const welcomeMessage = `
-🎬 *Welcome to Genius Hub Admin Bot!*
+      const welcomeMessage = `🎬 *Welcome to Genius Hub Admin Bot!*
 
 This bot allows you to control your video streaming platform remotely.
 
-*Available Commands:*
-/help - Show all commands
-/login - Authenticate as admin
-/status - Check platform status
-/get_url - Get current video URL
-/get_stats - Get platform statistics
-
-*Admin Commands (after login):*
-/disablevideo or /disable_video - Disable video streaming
-/enablevideo or /enable_video - Enable video streaming  
-/changeurl or /change_url - Change video source URL
-/togglechat or /toggle_chat - Toggle chat on/off
-/logout - Logout from admin session
-
-🔐 Use /login to authenticate and access admin features.
-      `;
-
-      const startKeyboard = createReplyKeyboard([
-        [{ text: '/login' }, { text: '/help' }],
-        [{ text: '/status' }, { text: '/get_stats' }]
-      ]);
-
+👇 *Choose an option below:*`;
+      
+      const startKeyboard = {
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '📊 Platform Status', callback_data: 'status' },
+              { text: '🔗 Get Video URL', callback_data: 'get_url' }
+            ],
+            [
+              { text: '📈 Statistics', callback_data: 'get_stats' },
+              { text: '🔐 Admin Login', callback_data: 'login' }
+            ],
+            [
+              { text: '❓ Help & Commands', callback_data: 'help' }
+            ]
+          ]
+        }
+      };
+      
       await sendMessage(chatId, welcomeMessage, startKeyboard);
       break;
 
@@ -238,11 +180,7 @@ This bot allows you to control your video streaming platform remotely.
 
 🔐 Admin authentication required for control commands.
       `;
-      const helpKeyboard = createReplyKeyboard([
-        [{ text: '/login' }, { text: '/status' }],
-        [{ text: '/get_stats' }, { text: '/start' }]
-      ]);
-      await sendMessage(chatId, helpMessage, helpKeyboard);
+      await sendMessage(chatId, helpMessage);
       break;
 
     case '/login':
@@ -252,11 +190,8 @@ This bot allows you to control your video streaming platform remotely.
           await sendMessage(chatId, '✅ You are already logged in as admin.\n\nUse /logout to end your session first.');
           return;
         }
-
-        // Start login process
         userSessions.set(chatId, { state: SESSION_STATES.WAITING_EMAIL });
-        const loginKeyboard = removeKeyboard();
-        await sendMessage(chatId, '🔑 Admin Login Process\n\nPlease enter your email address:', loginKeyboard);
+        await sendMessage(chatId, '🔑 Admin Login Process\n\nPlease enter your email address:');
       } else {
         // Legacy login format
         if (isAdminAuthenticated(chatId)) {
@@ -281,13 +216,10 @@ This bot allows you to control your video streaming platform remotely.
     case '/logout':
       if (isAdminAuthenticated(chatId)) {
         adminSessions.delete(chatId);
-        const startKeyboard = createReplyKeyboard([
-          [{ text: '/login' }, { text: '/help' }],
-          [{ text: '/status' }, { text: '/get_stats' }]
-        ]);
-        await sendMessage(chatId, '👋 *Logged out successfully!*\n\nYou have been logged out from the admin session.', { parse_mode: 'Markdown', ...startKeyboard });
+        supabaseService.clearAdminCredentials();
+        await sendMessage(chatId, '👋 *Logged out successfully!*\n\nYour admin session has been ended.\nUse /login to authenticate again.', { parse_mode: 'Markdown' });
       } else {
-        await sendMessage(chatId, '❌ *You are not logged in.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
+        await sendMessage(chatId, '❌ You are not currently logged in.\n\nUse /login to authenticate first.');
       }
       break;
 
@@ -425,8 +357,7 @@ This bot allows you to control your video streaming platform remotely.
       if (text.trim() === '/change_url' || text.trim() === '/changeurl') {
         // Interactive URL change
         userSessions.set(chatId, { state: SESSION_STATES.WAITING_URL });
-        const urlKeyboard = removeKeyboard();
-        await sendMessage(chatId, '🔗 *Change Video URL*\n\nPlease enter the new video URL:', { parse_mode: 'Markdown', ...urlKeyboard });
+        await sendMessage(chatId, '🔗 *Change Video URL*\n\nPlease enter the new video URL:', { parse_mode: 'Markdown' });
       } else {
         // Direct URL change
         const newUrl = text.substring(text.indexOf(' ') + 1).trim();
