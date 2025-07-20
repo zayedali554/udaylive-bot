@@ -100,28 +100,9 @@ async function performLogin(chatId, email, password) {
         ]
       ]);
       
-      await sendMessage(chatId, `
-🎉 ═══════════════════════════ 🎉
-✅ *ADMIN ACCESS GRANTED* ✅
-🎉 ═══════════════════════════ 🎉
-
-🚀 *Welcome to the Control Center!*
-
-🔥 You now have full administrative power over your streaming platform! Time to make some magic happen.
-
-🎯 *Choose your next move:*`, adminKeyboard);
+      await sendMessage(chatId, '✅ *Login successful!*\n\nYou are now authenticated as admin.\n\n👇 *Choose an admin action:*', adminKeyboard);
     } else {
-      await sendMessage(chatId, `
-🚫 ═════════════════════════ 🚫
-❌ *ACCESS DENIED* ❌
-🚫 ═════════════════════════ 🚫
-
-🔒 *Authentication Failed*
-
-⚠️ ${result.error || 'Invalid credentials'}
-
-🔄 *Ready to try again?*
-Use the 🔐 Admin Login button to retry!`, { parse_mode: 'Markdown' });
+      await sendMessage(chatId, `❌ *Login failed.*\n\n${result.error || 'Invalid credentials'}\n\nPlease try again with /login`, { parse_mode: 'Markdown' });
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -188,19 +169,11 @@ async function handleCommand(msg) {
 
   switch (command) {
     case '/start':
-      const welcomeMessage = `
-🌟 ═══════════════════════════ 🌟
-🎬 *GENIUS HUB ADMIN BOT* 🎬
-🌟 ═══════════════════════════ 🌟
+      const welcomeMessage = `🎬 *Welcome to Genius Hub Admin Bot!*
 
-🚀 *Welcome to the Ultimate Control Center!*
+This bot allows you to control your video streaming platform remotely.
 
-💫 Take full command of your video streaming platform with just a few taps! Experience seamless remote management like never before.
-
-✨ *Ready to get started?*
-👇 *Choose your path below:*
-
-🔥 *Let's make magic happen!* 🔥`;
+👇 *Choose an option below:*`;
       
       const startKeyboard = createReplyKeyboard([
         [
@@ -214,35 +187,29 @@ async function handleCommand(msg) {
 
     case '/help':
       const helpMessage = `
-📚 ═════════════════════════════ 📚
-🤖 *GENIUS HUB COMMAND CENTER* 🤖
-📚 ═════════════════════════════ 📚
+📋 *Genius Hub Admin Bot Commands*
 
-🌍 *PUBLIC COMMANDS* 🌍
-─────────────────────────
-🎆 `/start` - Launch the bot
-❓ `/help` - Show this command guide
-📊 `/status` - Check platform status
-🔗 `/get_url` - Get current video URL
-📈 `/get_stats` - View platform statistics
+*Public Commands:*
+/start - Welcome message
+/help - Show this help
+/status - Check platform status
+/get_url - Get current video URL
+/get_stats - Get platform statistics
 
-🔒 *ADMIN COMMANDS* 🔒
-─────────────────────────
-🔑 `/login` - Admin authentication
-🔴 `/disablevideo` - Stop video streaming
-🟢 `/enablevideo` - Start video streaming
-🔗 `/changeurl` - Update video source
-💬 `/togglechat` - Toggle chat system
-🚪 `/logout` - End admin session
+*Admin Commands:* (Requires authentication)
+/login <email> <password> - Authenticate as admin
+/disablevideo or /disable_video - Disable video streaming
+/enablevideo or /enable_video - Enable video streaming
+/changeurl or /change_url <url> - Change video source URL
+/togglechat or /toggle_chat - Toggle chat on/off
+/logout - Logout from admin session
 
-💡 *QUICK EXAMPLES* 💡
-─────────────────────────
-📝 \`/changeurl https://example.com/video.m3u8\`
-📝 \`/login admin@example.com yourpassword\`
+*Usage Examples:*
+\`/changeurl https://example.com/video.m3u8\`
+\`/change_url https://example.com/video.m3u8\`
+\`/login admin@example.com yourpassword\`
 
-🔐 *Admin authentication required for control commands*
-
-✨ *Ready to take control?* ✨
+🔐 Admin authentication required for control commands.
       `;
       await sendMessage(chatId, helpMessage);
       break;
@@ -255,16 +222,7 @@ async function handleCommand(msg) {
           return;
         }
         userSessions.set(chatId, { state: SESSION_STATES.WAITING_EMAIL });
-        await sendMessage(chatId, `
-🔐 ═════════════════════════ 🔐
-🔑 *ADMIN LOGIN PROCESS* 🔑
-🔐 ═════════════════════════ 🔐
-
-📧 *Step 1 of 2*
-
-👉 Please enter your admin email address:
-
-✨ *Type your email below* ✨`);
+        await sendMessage(chatId, '🔑 Admin Login Process\n\nPlease enter your email address:');
       } else {
         // Legacy login format
         if (isAdminAuthenticated(chatId)) {
@@ -290,28 +248,9 @@ async function handleCommand(msg) {
       if (isAdminAuthenticated(chatId)) {
         adminSessions.delete(chatId);
         supabaseService.clearAdminCredentials();
-        await sendMessage(chatId, `
-👋 ═══════════════════════════ 👋
-✅ *LOGOUT SUCCESSFUL* ✅
-👋 ═══════════════════════════ 👋
-
-🔒 *Admin session terminated*
-
-💫 Your administrative privileges have been safely cleared.
-
-🔄 *Want to login again?*
-Use the 🔐 Admin Login button!`, { parse_mode: 'Markdown' });
+        await sendMessage(chatId, '👋 *Logged out successfully!*\n\nYour admin session has been ended.\nUse /login to authenticate again.', { parse_mode: 'Markdown' });
       } else {
-        await sendMessage(chatId, `
-⚠️ ═════════════════════════ ⚠️
-❌ *NOT LOGGED IN* ❌
-⚠️ ═════════════════════════ ⚠️
-
-🔒 *No active admin session*
-
-👉 You need to authenticate first!
-
-🔐 *Use the Admin Login button to get started* 🔐`);
+        await sendMessage(chatId, '❌ You are not currently logged in.\n\nUse /login to authenticate first.');
       }
       break;
 
@@ -327,18 +266,12 @@ Use the 🔐 Admin Login button!`, { parse_mode: 'Markdown' });
         const currentUrl = await supabaseService.getVideoSource();
         
         const statusMessage = `
-📊 ═══════════════════════════ 📊
-🎆 *PLATFORM STATUS* 🎆
-📊 ═══════════════════════════ 📊
+📊 *Platform Status*
 
-🔥 *SYSTEM OVERVIEW* 🔥
-─────────────────────────
-🎥 *Video Stream:* ${videoLiveStatus ? '🟢 LIVE' : '🔴 OFFLINE'}
-💬 *Chat System:* ${chatStatus ? '🟢 ACTIVE' : '🔴 DISABLED'}
-🔗 *Video Source:* ${currentUrl ? '✅ CONFIGURED' : '❌ NOT SET'}
-⏰ *Last Check:* ${new Date().toLocaleString()}
-
-✨ *All systems monitored* ✨
+🎥 *Video Streaming:* ${videoLiveStatus ? '🟢 Enabled' : '🔴 Disabled'}
+💬 *Chat System:* ${chatStatus ? '🟢 Enabled' : '🔴 Disabled'}
+🔗 *Current URL:* ${currentUrl ? '✅ Set' : '❌ Not Set'}
+⏰ *Last Updated:* ${new Date().toLocaleString()}
         `;
 
         await sendMessage(chatId, statusMessage, { parse_mode: 'Markdown' });
@@ -400,16 +333,7 @@ Use the 🔐 Admin Login button!`, { parse_mode: 'Markdown' });
         console.log('Disable video result:', success);
         
         if (success) {
-          await sendMessage(chatId, `
-🔴 ═══════════════════════════ 🔴
-✅ *VIDEO STREAM DISABLED* ✅
-🔴 ═══════════════════════════ 🔴
-
-📺 *Stream Status: OFFLINE*
-
-🔒 The video stream has been successfully stopped and is no longer accessible to viewers.
-
-✨ *Operation completed successfully!* ✨`, { parse_mode: 'Markdown' });
+          await sendMessage(chatId, '🔴 *Video streaming disabled successfully!*\n\nThe video stream is now offline.', { parse_mode: 'Markdown' });
         } else {
           console.error('Failed to disable video - supabase operation returned false');
           await sendMessage(chatId, '❌ *Failed to disable video streaming.*\n\nPlease try again.', { parse_mode: 'Markdown' });
@@ -438,16 +362,7 @@ Use the 🔐 Admin Login button!`, { parse_mode: 'Markdown' });
         console.log('Enable video result:', success);
         
         if (success) {
-          await sendMessage(chatId, `
-🟢 ═══════════════════════════ 🟢
-✅ *VIDEO STREAM ENABLED* ✅
-🟢 ═══════════════════════════ 🟢
-
-📺 *Stream Status: LIVE*
-
-🚀 The video stream is now broadcasting and accessible to all viewers!
-
-✨ *Ready to entertain the world!* ✨`, { parse_mode: 'Markdown' });
+          await sendMessage(chatId, '🟢 *Video streaming enabled successfully!*\n\nThe video stream is now live.', { parse_mode: 'Markdown' });
         } else {
           console.error('Failed to enable video - supabase operation returned false');
           await sendMessage(chatId, '❌ *Failed to enable video streaming.*\n\nPlease try again.', { parse_mode: 'Markdown' });
@@ -473,16 +388,7 @@ Use the 🔐 Admin Login button!`, { parse_mode: 'Markdown' });
       if (msg.text.trim() === '/change_url' || msg.text.trim() === '/changeurl') {
         // Interactive URL change
         userSessions.set(chatId, { state: SESSION_STATES.WAITING_URL });
-        await sendMessage(chatId, `
-🔗 ═══════════════════════════ 🔗
-🎥 *CHANGE VIDEO URL* 🎥
-🔗 ═══════════════════════════ 🔗
-
-🎯 *Update your video source*
-
-👉 Please enter the new video URL:
-
-✨ *Paste your URL below* ✨`, { parse_mode: 'Markdown' });
+        await sendMessage(chatId, '🔗 *Change Video URL*\n\nPlease enter the new video URL:', { parse_mode: 'Markdown' });
       } else {
         // Direct URL change
         const newUrl = msg.text.substring(msg.text.indexOf(' ') + 1).trim();
@@ -585,16 +491,7 @@ async function handleInteractiveSession(msg) {
       session.email = text.trim();
       session.state = SESSION_STATES.WAITING_PASSWORD;
       userSessions.set(chatId, session);
-      await sendMessage(chatId, `
-✅ ═════════════════════════ ✅
-📧 *EMAIL CONFIRMED* 📧
-✅ ═════════════════════════ ✅
-
-🔐 *Step 2 of 2*
-
-👉 Now please enter your admin password:
-
-🔒 *Type your password below* 🔒`, { parse_mode: 'Markdown' });
+      await sendMessage(chatId, '🔐 *Email received!*\n\nNow please enter your password:', { parse_mode: 'Markdown' });
       break;
       
     case SESSION_STATES.WAITING_PASSWORD:
