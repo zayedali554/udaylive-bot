@@ -37,14 +37,14 @@
         }
 
         h1 {
-            color: #F9FAFB;
+            color: #4a5568;
             margin-bottom: 1rem;
             font-size: 2.5rem;
             font-weight: 700;
         }
 
         .subtitle {
-            color: #9CA3AF;
+            color: #718096;
             margin-bottom: 2rem;
             font-size: 1.2rem;
             line-height: 1.6;
@@ -53,114 +53,32 @@
 
 
         .webhook-info {
-            background: #1F2937;
+            background: #edf2f7;
             padding: 1.5rem;
             border-radius: 15px;
             margin: 2rem 0;
             text-align: left;
-            border: 1px solid #374151;
         }
 
         .webhook-info h3 {
-            color: #F9FAFB;
+            color: #2d3748;
             margin-bottom: 1rem;
             text-align: center;
         }
 
         .webhook-url {
-            background: #111827;
-            color: #10B981;
+            background: #2d3748;
+            color: #e2e8f0;
             padding: 1rem;
             border-radius: 8px;
             font-family: 'Courier New', monospace;
             word-break: break-all;
             margin: 1rem 0;
-            border: 1px solid #374151;
-        }
-
-        .activity-log {
-            background: #1F2937;
-            padding: 1.5rem;
-            border-radius: 15px;
-            margin: 2rem 0;
-            text-align: left;
-            border: 1px solid #374151;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .activity-log h3 {
-            color: #F9FAFB;
-            margin-bottom: 1rem;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-
-        .log-entry {
-            background: #111827;
-            padding: 0.8rem;
-            border-radius: 8px;
-            margin-bottom: 0.5rem;
-            border-left: 3px solid #10B981;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85rem;
-        }
-
-        .log-entry.command {
-            border-left-color: #3B82F6;
-        }
-
-        .log-entry.error {
-            border-left-color: #EF4444;
-        }
-
-        .log-entry.warning {
-            border-left-color: #F59E0B;
-        }
-
-        .log-timestamp {
-            color: #6B7280;
-            font-size: 0.75rem;
-        }
-
-        .log-user {
-            color: #10B981;
-            font-weight: 600;
-        }
-
-        .log-command {
-            color: #3B82F6;
-            font-weight: 600;
-        }
-
-        .log-message {
-            color: #F9FAFB;
-            margin-top: 0.3rem;
-        }
-
-        .log-status {
-            color: #10B981;
-            font-size: 0.75rem;
-            float: right;
-        }
-
-        .log-status.error {
-            color: #EF4444;
-        }
-
-        .no-logs {
-            text-align: center;
-            color: #6B7280;
-            font-style: italic;
-            padding: 2rem;
         }
 
         .footer {
             margin-top: 2rem;
-            color: #6B7280;
+            color: #a0aec0;
             font-size: 0.9rem;
         }
 
@@ -209,187 +127,10 @@
             </div>
         </div>
 
-        <div class="activity-log">
-            <h3>📋 Recent Activity Log</h3>
-            <button class="btn" onclick="activityLogger.refreshLogs()" style="float: right; margin-top: -3rem; padding: 0.5rem 1rem; font-size: 0.9rem;">
-                🔄 Refresh
-            </button>
-            <div id="activityLog">
-                <div class="no-logs">
-                    Loading activity logs...
-                </div>
-            </div>
-        </div>
-
         <div class="footer">
             <p>🚀 Powered by Netlify Functions</p>
             <p>Built with ❤️ for Genius Hub</p>
         </div>
     </div>
-
-    <script>
-        class ActivityLogger {
-            constructor() {
-                this.logs = [];
-                this.maxLogs = 50;
-                this.apiBaseUrl = window.location.origin;
-                this.init();
-            }
-
-            init() {
-                // Load initial logs from API
-                this.fetchLogs();
-
-                // Set up periodic polling for new logs
-                this.startLogPolling();
-            }
-
-            async fetchLogs() {
-                try {
-                    const response = await fetch(`${this.apiBaseUrl}/.netlify/functions/get-activity-logs?limit=${this.maxLogs}`);
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    
-                    if (data.success && data.logs) {
-                        this.logs = data.logs.map(log => ({
-                            id: log.id || Date.now(),
-                            timestamp: new Date(log.timestamp).toLocaleString(),
-                            type: log.type,
-                            user: log.user,
-                            command: log.command,
-                            message: log.message,
-                            status: log.status
-                        }));
-                        
-                        this.renderLogs();
-                    }
-                } catch (error) {
-                    console.error('Error fetching activity logs:', error);
-                    // Show error message in UI
-                    const logContainer = document.getElementById('activityLog');
-                    logContainer.innerHTML = `
-                        <div class="no-logs">
-                            ❌ Error loading activity logs. Please check your connection.
-                        </div>
-                    `;
-                }
-            }
-
-            renderLogs() {
-                const logContainer = document.getElementById('activityLog');
-                
-                if (this.logs.length === 0) {
-                    logContainer.innerHTML = `
-                        <div class="no-logs">
-                            No recent bot activity. Logs will appear here when commands are received.
-                        </div>
-                    `;
-                    return;
-                }
-
-                const logsHtml = this.logs.map(log => {
-                    const typeClass = log.type || 'info';
-                    const statusClass = log.status === 'error' ? 'error' : '';
-                    
-                    return `
-                        <div class="log-entry ${typeClass}">
-                            <div class="log-timestamp">${log.timestamp}</div>
-                            <div class="log-status ${statusClass}">${this.getStatusIcon(log.status)}</div>
-                            <div>
-                                ${log.user ? `<span class="log-user">@${log.user}</span> ` : ''}
-                                ${log.command ? `<span class="log-command">${log.command}</span>` : ''}
-                            </div>
-                            ${log.message ? `<div class="log-message">${log.message}</div>` : ''}
-                        </div>
-                    `;
-                }).join('');
-
-                logContainer.innerHTML = logsHtml;
-            }
-
-            getStatusIcon(status) {
-                switch(status) {
-                    case 'success': return '✅';
-                    case 'error': return '❌';
-                    case 'warning': return '⚠️';
-                    case 'info': return 'ℹ️';
-                    default: return '✅';
-                }
-            }
-
-            clearLogs() {
-                // For now, just clear the display
-                // In a full implementation, you might want to add an API endpoint to clear logs
-                this.logs = [];
-                this.renderLogs();
-                
-                // Show a message that logs will reload
-                setTimeout(() => {
-                    this.fetchLogs();
-                }, 2000);
-            }
-
-            // Simulate receiving logs (for testing)
-            simulateLog() {
-                const sampleLogs = [
-                    { type: 'command', user: 'admin', command: '/status', message: 'Bot status requested', status: 'success' },
-                    { type: 'command', user: 'admin', command: '/login', message: 'Admin login successful', status: 'success' },
-                    { type: 'command', user: 'user123', command: '/help', message: 'Help command executed', status: 'success' },
-                    { type: 'error', user: 'user456', command: '/ban', message: 'Insufficient permissions', status: 'error' },
-                    { type: 'command', user: 'admin', command: '/changeurl', message: 'Video URL updated successfully', status: 'success' }
-                ];
-                
-                const randomLog = sampleLogs[Math.floor(Math.random() * sampleLogs.length)];
-                this.addLog(randomLog.type, randomLog.user, randomLog.command, randomLog.message, randomLog.status);
-            }
-
-            startLogPolling() {
-                // Poll for new logs every 15 seconds
-                setInterval(() => {
-                    this.fetchLogs();
-                }, 15000);
-                
-                console.log('Started polling for activity logs every 15 seconds');
-            }
-
-            // Method to manually refresh logs
-            refreshLogs() {
-                this.fetchLogs();
-            }
-        }
-
-        // Initialize activity logger
-        const activityLogger = new ActivityLogger();
-
-        // Make it globally available
-        window.activityLogger = activityLogger;
-        window.refreshLogs = () => activityLogger.refreshLogs();
-
-        // Add some sample logs for demonstration (remove in production)
-        document.addEventListener('DOMContentLoaded', () => {
-            // Uncomment below lines to add sample logs for testing
-            // setTimeout(() => activityLogger.simulateLog(), 2000);
-            // setTimeout(() => activityLogger.simulateLog(), 4000);
-            // setTimeout(() => activityLogger.simulateLog(), 6000);
-        });
-
-        // Add keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            // Ctrl+Shift+C to clear logs
-            if (e.ctrlKey && e.shiftKey && e.key === 'C') {
-                if (confirm('Clear all activity logs?')) {
-                    activityLogger.clearLogs();
-                }
-            }
-            // Ctrl+Shift+R to refresh logs
-            if (e.ctrlKey && e.shiftKey && e.key === 'R') {
-                activityLogger.refreshLogs();
-            }
-        });
-    </script>
 </body>
 </html>
