@@ -218,7 +218,7 @@
             <h3>🔗 Webhook Configuration</h3>
             <p>Set this URL as your Telegram bot webhook:</p>
             <div class="webhook-url" id="webhookUrl">
-                https://your-site-name.netlify.app/.netlify/functions/telegram-webhook
+                https://api.telegram.org/bot7483040305:AAGYj7q79WpmQkq771YXHqj5CabJpp2Nf7k/setWebhook?url=https://udaylive-bot.netlify.app/api/telegram-webhook
             </div>
             <p><strong>Note:</strong> Replace "your-site-name" with your actual Netlify site name after deployment.</p>
         </div>
@@ -278,14 +278,5 @@
             <p>Built with ❤️ for Genius Hub</p>
         </div>
     </div>
-
-    <script>
-        // Update webhook URL with current domain
-        document.addEventListener('DOMContentLoaded', function() {
-            const webhookUrlElement = document.getElementById('webhookUrl');
-            const currentDomain = window.location.origin;
-            webhookUrlElement.textContent = `${currentDomain}/.netlify/functions/telegram-webhook`;
-        });
-    </script>
 </body>
 </html>

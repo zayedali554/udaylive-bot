@@ -28,6 +28,17 @@ function createInlineKeyboard(buttons) {
   };
 }
 
+// Utility function to create reply keyboard
+function createReplyKeyboard(buttons) {
+  return {
+    reply_markup: {
+      keyboard: buttons,
+      resize_keyboard: true,
+      one_time_keyboard: false
+    }
+  };
+}
+
 // Function to send message to Telegram
 async function sendMessage(chatId, text, options = {}) {
   const url = `https://api.telegram.org/bot${config.BOT_TOKEN}/sendMessage`;
@@ -67,28 +78,24 @@ async function performLogin(chatId, email, password) {
     if (result.success) {
       adminSessions.add(chatId);
       
-      const adminKeyboard = {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: '🔴 Disable Video', callback_data: 'disable_video' },
-              { text: '🟢 Enable Video', callback_data: 'enable_video' }
-            ],
-            [
-              { text: '🔗 Change URL', callback_data: 'change_url' },
-              { text: '💬 Toggle Chat', callback_data: 'toggle_chat' }
-            ],
-            [
-              { text: '🗑️ Clear Messages', callback_data: 'clear_messages' },
-              { text: '📊 Platform Status', callback_data: 'status' }
-            ],
-            [
-              { text: '📈 Statistics', callback_data: 'get_stats' },
-              { text: '🚪 Logout', callback_data: 'logout' }
-            ]
-          ]
-        }
-      };
+      const adminKeyboard = createReplyKeyboard([
+        [
+          { text: '🔴 Disable Video' },
+          { text: '🟢 Enable Video' }
+        ],
+        [
+          { text: '🔗 Change URL' },
+          { text: '💬 Toggle Chat' }
+        ],
+        [
+          { text: '🗑️ Clear Messages' },
+          { text: '📊 Platform Status' }
+        ],
+        [
+          { text: '📈 Statistics' },
+          { text: '🚪 Logout' }
+        ]
+      ]);
       
       await sendMessage(chatId, '✅ *Login successful!*\n\nYou are now authenticated as admin.\n\n👇 *Choose an admin action:*', adminKeyboard);
     } else {
@@ -121,7 +128,27 @@ async function performUrlChange(chatId, newUrl) {
 async function handleCommand(msg) {
   const chatId = msg.chat.id;
   const text = msg.text;
-  const command = text.split(' ')[0].toLowerCase();
+  let command = text.split(' ')[0].toLowerCase();
+
+  // Map reply keyboard button texts to commands
+  const buttonTextMap = {
+    '📊 Platform Status': '/status',
+    '🔗 Get Video URL': '/get_url',
+    '📈 Statistics': '/get_stats',
+    '🔐 Admin Login': '/login',
+    '❓ Help & Commands': '/help',
+    '🔴 Disable Video': '/disable_video',
+    '🟢 Enable Video': '/enable_video',
+    '🔗 Change URL': '/change_url',
+    '💬 Toggle Chat': '/toggle_chat',
+    '🗑️ Clear Messages': '/clear_messages',
+    '🚪 Logout': '/logout'
+  };
+
+  // Check if the text matches a button text and convert to command
+  if (buttonTextMap[text]) {
+    command = buttonTextMap[text];
+  }
 
   console.log('Processing command:', command, 'from chatId:', chatId);
 
@@ -133,23 +160,19 @@ This bot allows you to control your video streaming platform remotely.
 
 👇 *Choose an option below:*`;
       
-      const startKeyboard = {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: '📊 Platform Status', callback_data: 'status' },
-              { text: '🔗 Get Video URL', callback_data: 'get_url' }
-            ],
-            [
-              { text: '📈 Statistics', callback_data: 'get_stats' },
-              { text: '🔐 Admin Login', callback_data: 'login' }
-            ],
-            [
-              { text: '❓ Help & Commands', callback_data: 'help' }
-            ]
-          ]
-        }
-      };
+      const startKeyboard = createReplyKeyboard([
+        [
+          { text: '📊 Platform Status' },
+          { text: '🔗 Get Video URL' }
+        ],
+        [
+          { text: '📈 Statistics' },
+          { text: '🔐 Admin Login' }
+        ],
+        [
+          { text: '❓ Help & Commands' }
+        ]
+      ]);
       
       await sendMessage(chatId, welcomeMessage, startKeyboard);
       break;
