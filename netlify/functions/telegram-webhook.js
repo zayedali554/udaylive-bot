@@ -93,6 +93,9 @@ async function performLogin(chatId, email, password) {
         ],
         [
           { text: '📈 Statistics' },
+          { text: '🔗 Get Video URL' }
+        ],
+        [
           { text: '🚪 Logout' }
         ]
       ]);
@@ -168,14 +171,7 @@ This bot allows you to control your video streaming platform remotely.
       
       const startKeyboard = createReplyKeyboard([
         [
-          { text: '📊 Platform Status' },
-          { text: '🔗 Get Video URL' }
-        ],
-        [
-          { text: '📈 Statistics' },
-          { text: '🔐 Admin Login' }
-        ],
-        [
+          { text: '🔐 Admin Login' },
           { text: '❓ Help & Commands' }
         ]
       ]);
@@ -383,13 +379,13 @@ This bot allows you to control your video streaming platform remotely.
         return;
       }
 
-      if (text.trim() === '/change_url' || text.trim() === '/changeurl') {
+      if (msg.text.trim() === '/change_url' || msg.text.trim() === '/changeurl') {
         // Interactive URL change
         userSessions.set(chatId, { state: SESSION_STATES.WAITING_URL });
         await sendMessage(chatId, '🔗 *Change Video URL*\n\nPlease enter the new video URL:', { parse_mode: 'Markdown' });
       } else {
         // Direct URL change
-        const newUrl = text.substring(text.indexOf(' ') + 1).trim();
+        const newUrl = msg.text.substring(msg.text.indexOf(' ') + 1).trim();
         if (!newUrl) {
           await sendMessage(chatId, '❌ *No URL provided.*\n\nUsage: `/changeurl <url>`\n\nExample: `/changeurl https://example.com/video.m3u8`', { parse_mode: 'Markdown' });
           return;
