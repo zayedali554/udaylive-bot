@@ -157,6 +157,12 @@ async function handleCommand(msg) {
       // Override the text to ensure interactive login is triggered
       msg.text = '/login';
     }
+    // For change URL button, ensure it triggers interactive URL change
+    if (text === '🔗 Change URL') {
+      command = '/change_url';
+      // Override the text to ensure interactive URL change is triggered
+      msg.text = '/change_url';
+    }
   }
 
   console.log('Processing command:', command, 'from chatId:', chatId);
