@@ -7,8 +7,8 @@ const adminSessions = new Map(); // chatId -> { timestamp, email }
 // Store user interaction sessions for multi-step processes
 const userSessions = new Map();
 
-// Session timeout (30 minutes in milliseconds)
-const SESSION_TIMEOUT = 30 * 60 * 1000;
+// Session timeout (24 hours in milliseconds)
+const SESSION_TIMEOUT = 24 * 60 * 60 * 1000;
 
 // Session states
 const SESSION_STATES = {
@@ -122,7 +122,7 @@ async function performLogin(chatId, email, password) {
         ]
       ]);
       
-      await sendMessage(chatId, '✅ *Login successful!*\n\nYou are now authenticated as admin.\n\n👇 *Choose an admin action:*', adminKeyboard);
+      await sendMessage(chatId, '✅ *Login successful!*\n\nYou are now authenticated as admin.\n🕒 *Session valid for 24 hours*\n\n👇 *Choose an admin action:*', adminKeyboard);
     } else {
       await sendMessage(chatId, `❌ *Login failed.*\n\n${result.error || 'Invalid credentials'}\n\nPlease try again with /login`, { parse_mode: 'Markdown' });
     }

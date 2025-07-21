@@ -26,8 +26,8 @@ const adminSessions = new Map(); // chatId -> { timestamp, email }
 // Store user interaction sessions for multi-step processes
 const userSessions = new Map();
 
-// Session timeout (30 minutes in milliseconds)
-const SESSION_TIMEOUT = 30 * 60 * 1000;
+// Session timeout (24 hours in milliseconds)
+const SESSION_TIMEOUT = 24 * 60 * 60 * 1000;
 
 // Session states
 const SESSION_STATES = {
@@ -175,7 +175,7 @@ async function performLogin(chatId, email, password) {
       userSessions.delete(chatId); // Clear any pending session
       console.log('Admin login successful for chatId:', chatId, 'Email:', email);
       console.log('Admin sessions after login:', Array.from(adminSessions.keys()));
-      bot.sendMessage(chatId, '✅ Admin login successful!\n\nYou now have access to admin commands:\n• /disablevideo or /disable_video - Disable video streaming\n• /enablevideo or /enable_video - Enable video streaming\n• /changeurl or /change_url - Change video source\n• /togglechat or /toggle_chat - Toggle chat system\n• /clearmessages or /clear_messages - Clear all chat messages\n• /logout - End admin session');
+      bot.sendMessage(chatId, '✅ Admin login successful!\n🕒 Session valid for 24 hours\n\nYou now have access to admin commands:\n• /disablevideo or /disable_video - Disable video streaming\n• /enablevideo or /enable_video - Enable video streaming\n• /changeurl or /change_url - Change video source\n• /togglechat or /toggle_chat - Toggle chat system\n• /clearmessages or /clear_messages - Clear all chat messages\n• /logout - End admin session');
     } else {
       console.log('Admin login failed for chatId:', chatId, 'Error:', authResult.error);
       bot.sendMessage(chatId, `❌ Authentication failed\n\n${authResult.error || 'Invalid credentials'}. Please try again with /login.`);
