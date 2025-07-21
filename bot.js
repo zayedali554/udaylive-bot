@@ -97,29 +97,59 @@ This bot allows you to control your video streaming platform remotely.
 bot.onText(/\/help/, async (msg) => {
   const chatId = msg.chat.id;
   const helpMessage = `
-📋 *Genius Hub Admin Bot Commands*
+🎦 *Genius Hub Admin Bot* 🤖
 
-*Public Commands:*
-/start - Welcome message
-/help - Show this help
-/status - Check platform status
-/get_url - Get current video URL
-/get_stats - Get platform statistics
+📝 *About:*
+Remotely control your Genius Hub video streaming platform from anywhere! This bot provides full admin access to manage your streaming service.
 
-*Admin Commands:* (Requires authentication)
-/login <email> <password> - Authenticate as admin
-/disablevideo or /disable_video - Disable video streaming
-/enablevideo or /enable_video - Enable video streaming
-/changeurl or /change_url <url> - Change video source URL
-/togglechat or /toggle_chat - Toggle chat on/off
-/logout - Logout from admin session
+—————————————————————
 
-*Usage Examples:*
-\`/changeurl https://example.com/video.m3u8\`
-\`/change_url https://example.com/video.m3u8\`
-\`/login admin@example.com yourpassword\`
+🌍 *PUBLIC COMMANDS* (Available to everyone)
 
-🔐 Admin authentication required for control commands.
+🚀 \`/start\` - Welcome message & quick access
+❓ \`/help\` - Show this comprehensive help guide
+📊 \`/status\` - Check platform status (video/chat)
+🔗 \`/get_url\` - Get current video stream URL
+📈 \`/get_stats\` - View platform statistics
+
+—————————————————————
+
+🔐 *ADMIN COMMANDS* (Authentication required)
+
+🔑 *Authentication:*
+\`/login\` - Interactive step-by-step login
+\`/login email password\` - Quick login format
+🚪 \`/logout\` - End admin session
+
+🎥 *Video Controls:*
+🔴 \`/disable_video\` - Stop video streaming
+🟢 \`/enable_video\` - Start video streaming
+🔗 \`/change_url\` - Update video source URL
+
+💬 *Chat Management:*
+🔄 \`/toggle_chat\` - Enable/disable chat system
+🗑️ \`/clear_messages\` - Clear all chat messages
+
+—————————————————————
+
+📝 *USAGE EXAMPLES:*
+
+🔑 Login: \`/login admin@example.com mypassword\`
+🔗 Change URL: \`/change_url https://stream.example.com/live.m3u8\`
+📊 Check status: \`/status\`
+
+—————————————————————
+
+ℹ️ *IMPORTANT NOTES:*
+
+• 🕒 Admin sessions last **24 hours**
+• 🔐 Authentication required for all control commands
+• 🔄 Changes take effect immediately on your platform
+• 📱 Use reply keyboard buttons for easier access
+
+—————————————————————
+
+🚀 **Ready to get started?** Use \`/login\` to authenticate and access admin controls!
   `;
 
   await bot.sendMessage(chatId, helpMessage);
