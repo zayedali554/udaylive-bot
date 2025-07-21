@@ -240,7 +240,31 @@ This bot allows you to control your video streaming platform remotely.
       if (msg.text.trim() === '/login') {
         // Interactive login
         if (isAdminAuthenticated(chatId)) {
-          await sendMessage(chatId, '✅ You are already logged in as admin.\n\nUse /logout to end your session first.');
+          // Show admin menu since user is already authenticated
+          const session = adminSessions.get(chatId);
+          const adminKeyboard = createReplyKeyboard([
+            [
+              { text: '🔴 Disable Video' },
+              { text: '🟢 Enable Video' }
+            ],
+            [
+              { text: '🔗 Change URL' },
+              { text: '💬 Toggle Chat' }
+            ],
+            [
+              { text: '🗑️ Clear Messages' },
+              { text: '📊 Platform Status' }
+            ],
+            [
+              { text: '📈 Statistics' },
+              { text: '🔗 Get Video URL' }
+            ],
+            [
+              { text: '🚪 Logout' }
+            ]
+          ]);
+          
+          await sendMessage(chatId, `✅ *Welcome back, Admin!*\n\nYou are already logged in as: ${session.email}\n\n👇 *Choose an admin action:*`, adminKeyboard);
           return;
         }
         userSessions.set(chatId, { state: SESSION_STATES.WAITING_EMAIL });
@@ -248,7 +272,31 @@ This bot allows you to control your video streaming platform remotely.
       } else {
         // Legacy login format
         if (isAdminAuthenticated(chatId)) {
-          await sendMessage(chatId, '✅ You are already logged in as admin.\n\nUse /logout to end your session first.');
+          // Show admin menu since user is already authenticated
+          const session = adminSessions.get(chatId);
+          const adminKeyboard = createReplyKeyboard([
+            [
+              { text: '🔴 Disable Video' },
+              { text: '🟢 Enable Video' }
+            ],
+            [
+              { text: '🔗 Change URL' },
+              { text: '💬 Toggle Chat' }
+            ],
+            [
+              { text: '🗑️ Clear Messages' },
+              { text: '📊 Platform Status' }
+            ],
+            [
+              { text: '📈 Statistics' },
+              { text: '🔗 Get Video URL' }
+            ],
+            [
+              { text: '🚪 Logout' }
+            ]
+          ]);
+          
+          await sendMessage(chatId, `✅ *Welcome back, Admin!*\n\nYou are already logged in as: ${session.email}\n\n👇 *Choose an admin action:*`, adminKeyboard);
           return;
         }
 
