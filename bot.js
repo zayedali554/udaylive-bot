@@ -20,11 +20,14 @@ bot.setMyCommands([
   { command: 'logout', description: 'Logout from admin session' }
 ]);
 
-// Store authenticated admin sessions
-const adminSessions = new Set();
+// Store authenticated admin sessions with timestamps
+const adminSessions = new Map(); // chatId -> { timestamp, email }
 
 // Store user interaction sessions for multi-step processes
 const userSessions = new Map();
+
+// Session timeout (30 minutes in milliseconds)
+const SESSION_TIMEOUT = 30 * 60 * 1000;
 
 // Session states
 const SESSION_STATES = {
@@ -35,7 +38,22 @@ const SESSION_STATES = {
 
 // Utility function to check if user is authenticated admin
 function isAdminAuthenticated(chatId) {
-  return adminSessions.has(chatId);
+  const session = adminSessions.get(chatId);
+  if (!session) {
+    return false;
+  }
+  
+  // Check if session has expired
+  const now = Date.now();
+  if (now - session.timestamp > SESSION_TIMEOUT) {
+    // Session expired, remove it
+    adminSessions.delete(chatId);
+    return false;
+  }
+  
+  // Session is valid, update timestamp for activity
+  session.timestamp = now;
+  return true;
 }
 
 // Utility function to create inline keyboard
@@ -149,10 +167,14 @@ async function performLogin(chatId, email, password) {
     const authResult = await supabaseService.checkAdminAuth(email, password);
     
     if (authResult.success) {
-      adminSessions.add(chatId);
+      // Store session with timestamp and email
+      adminSessions.set(chatId, {
+        timestamp: Date.now(),
+        email: email
+      });
       userSessions.delete(chatId); // Clear any pending session
-      console.log('Admin login successful for chatId:', chatId);
-      console.log('Admin sessions after login:', Array.from(adminSessions));
+      console.log('Admin login successful for chatId:', chatId, 'Email:', email);
+      console.log('Admin sessions after login:', Array.from(adminSessions.keys()));
       bot.sendMessage(chatId, '✅ Admin login successful!\n\nYou now have access to admin commands:\n• /disablevideo or /disable_video - Disable video streaming\n• /enablevideo or /enable_video - Enable video streaming\n• /changeurl or /change_url - Change video source\n• /togglechat or /toggle_chat - Toggle chat system\n• /clearmessages or /clear_messages - Clear all chat messages\n• /logout - End admin session');
     } else {
       console.log('Admin login failed for chatId:', chatId, 'Error:', authResult.error);
@@ -176,11 +198,12 @@ bot.onText(/\/logout/, async (msg) => {
   const chatId = msg.chat.id;
   console.log('Logout command received from chatId:', chatId);
   
-  if (adminSessions.has(chatId)) {
+  const session = adminSessions.get(chatId);
+  if (session) {
     adminSessions.delete(chatId);
     userSessions.delete(chatId); // Clear any pending interactive sessions
     supabaseService.clearAdminCredentials(); // Clear stored credentials
-    await bot.sendMessage(chatId, '👋 Logged out successfully!\n\nYou no longer have admin access. Use /login to authenticate again.');
+    await bot.sendMessage(chatId, `👋 Logged out successfully!\n\nSession ended for: ${session.email}\n\nYou no longer have admin access. Use /login to authenticate again.`);
   } else {
     await bot.sendMessage(chatId, '❌ You are not logged in.\n\nUse /login to authenticate first.');
   }

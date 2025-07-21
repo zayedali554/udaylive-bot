@@ -26,8 +26,7 @@ class SupabaseService {
       if (data.user) {
         // Store credentials for authenticated operations
         this.adminCredentials = { email, password };
-        // Sign out after storing credentials
-        await this.client.auth.signOut();
+        // Keep the session active - don't sign out immediately
         return { success: true, user: data.user };
       }
 
