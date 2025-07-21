@@ -211,12 +211,9 @@ This bot allows you to control your video streaming platform remotely.
       const helpMessage = `
 🎦 *Genius Hub Admin Bot* 🤖
 
-📝 *About:*
-Remotely control your Genius Hub video streaming platform from anywhere! This bot provides full admin access to manage your streaming service.
-
 —————————————————————
 
-🌍 *PUBLIC COMMANDS* (Available to everyone)
+🌍 *PUBLIC COMMANDS*
 
 🚀 \`/start\` - Welcome message & quick access
 ❓ \`/help\` - Show this comprehensive help guide
@@ -226,7 +223,7 @@ Remotely control your Genius Hub video streaming platform from anywhere! This bo
 
 —————————————————————
 
-🔐 *ADMIN COMMANDS* (Authentication required)
+🔐 *ADMIN COMMANDS*
 
 🔑 *Authentication:*
 \`/login\` - Interactive step-by-step login
