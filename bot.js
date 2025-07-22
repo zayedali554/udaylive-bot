@@ -65,6 +65,17 @@ function createInlineKeyboard(buttons) {
   };
 }
 
+// Utility function to create reply keyboard
+function createReplyKeyboard(buttons) {
+  return {
+    reply_markup: {
+      keyboard: buttons,
+      resize_keyboard: true,
+      one_time_keyboard: false
+    }
+  };
+}
+
 // Start command
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
@@ -90,7 +101,12 @@ This bot allows you to control your video streaming platform remotely.
 🔐 Use /login to authenticate and access admin features.
   `;
 
-  await bot.sendMessage(chatId, welcomeMessage);
+  // Create inline keyboard with Admin Login button
+  const startKeyboard = createInlineKeyboard([
+    [{ text: '🔑 Admin Login', callback_data: 'admin_login' }]
+  ]);
+
+  await bot.sendMessage(chatId, welcomeMessage, startKeyboard);
 });
 
 // Help command
@@ -99,12 +115,9 @@ bot.onText(/\/help/, async (msg) => {
   const helpMessage = `
 🎦 *Genius Hub Admin Bot* 🤖
 
-📝 *About:*
-Remotely control your Genius Hub video streaming platform from anywhere! This bot provides full admin access to manage your streaming service.
-
 —————————————————————
 
-🌍 *PUBLIC COMMANDS* (Available to everyone)
+🌍 *PUBLIC COMMANDS*
 
 🚀 \`/start\` - Welcome message & quick access
 ❓ \`/help\` - Show this comprehensive help guide
@@ -114,7 +127,7 @@ Remotely control your Genius Hub video streaming platform from anywhere! This bo
 
 —————————————————————
 
-🔐 *ADMIN COMMANDS* (Authentication required)
+🔐 *ADMIN COMMANDS*
 
 🔑 *Authentication:*
 \`/login\` - Interactive step-by-step login
@@ -160,7 +173,31 @@ bot.onText(/\/login$/, async (msg) => {
   const chatId = msg.chat.id;
 
   if (isAdminAuthenticated(chatId)) {
-    await bot.sendMessage(chatId, '✅ You are already logged in as admin.\n\nUse /logout to end your session first.');
+    // Show admin menu since user is already authenticated
+    const session = adminSessions.get(chatId);
+    const adminKeyboard = createReplyKeyboard([
+      [
+        { text: '🔴 Disable Video' },
+        { text: '🟢 Enable Video' }
+      ],
+      [
+        { text: '🔗 Change URL' },
+        { text: '💬 Toggle Chat' }
+      ],
+      [
+        { text: '🗑️ Clear Messages' },
+        { text: '📊 Platform Status' }
+      ],
+      [
+        { text: '📈 Statistics' },
+        { text: '🔗 Get Video URL' }
+      ],
+      [
+        { text: '🚪 Logout' }
+      ]
+    ]);
+    
+    await bot.sendMessage(chatId, `✅ *Welcome back, Admin!*\n\nYou are already logged in as: ${session.email}\n\n👇 *Choose an admin action:*`, adminKeyboard);
     return;
   }
 
@@ -175,7 +212,31 @@ bot.onText(/\/login\s+(.+)/, async (msg, match) => {
   const args = match[1];
 
   if (isAdminAuthenticated(chatId)) {
-    await bot.sendMessage(chatId, '✅ You are already logged in as admin.\n\nUse /logout to end your session first.');
+    // Show admin menu since user is already authenticated
+    const session = adminSessions.get(chatId);
+    const adminKeyboard = createReplyKeyboard([
+      [
+        { text: '🔴 Disable Video' },
+        { text: '🟢 Enable Video' }
+      ],
+      [
+        { text: '🔗 Change URL' },
+        { text: '💬 Toggle Chat' }
+      ],
+      [
+        { text: '🗑️ Clear Messages' },
+        { text: '📊 Platform Status' }
+      ],
+      [
+        { text: '📈 Statistics' },
+        { text: '🔗 Get Video URL' }
+      ],
+      [
+        { text: '🚪 Logout' }
+      ]
+    ]);
+    
+    await bot.sendMessage(chatId, `✅ *Welcome back, Admin!*\n\nYou are already logged in as: ${session.email}\n\n👇 *Choose an admin action:*`, adminKeyboard);
     return;
   }
 
@@ -205,7 +266,30 @@ async function performLogin(chatId, email, password) {
       userSessions.delete(chatId); // Clear any pending session
       console.log('Admin login successful for chatId:', chatId, 'Email:', email);
       console.log('Admin sessions after login:', Array.from(adminSessions.keys()));
-      bot.sendMessage(chatId, '✅ Admin login successful!\n🕒 Session valid for 24 hours\n\nYou now have access to admin commands:\n• /disablevideo or /disable_video - Disable video streaming\n• /enablevideo or /enable_video - Enable video streaming\n• /changeurl or /change_url - Change video source\n• /togglechat or /toggle_chat - Toggle chat system\n• /clearmessages or /clear_messages - Clear all chat messages\n• /logout - End admin session');
+      // Create admin keyboard with buttons
+      const adminKeyboard = createReplyKeyboard([
+        [
+          { text: '🔴 Disable Video' },
+          { text: '🟢 Enable Video' }
+        ],
+        [
+          { text: '🔗 Change URL' },
+          { text: '💬 Toggle Chat' }
+        ],
+        [
+          { text: '🗑️ Clear Messages' },
+          { text: '📊 Platform Status' }
+        ],
+        [
+          { text: '📈 Statistics' },
+          { text: '🔗 Get Video URL' }
+        ],
+        [
+          { text: '🚪 Logout' }
+        ]
+      ]);
+      
+      bot.sendMessage(chatId, '✅ *Login successful!*\n\nYou are now authenticated as admin.\n🕒 *Session valid for 24 hours*\n\n👇 *Choose an admin action:*', adminKeyboard);
     } else {
       console.log('Admin login failed for chatId:', chatId, 'Error:', authResult.error);
       bot.sendMessage(chatId, `❌ Authentication failed\n\n${authResult.error || 'Invalid credentials'}. Please try again with /login.`);
@@ -589,10 +673,100 @@ bot.on('callback_query', async (callbackQuery) => {
   } else if (data === 'change_url') {
     fakeMsg.text = '/change_url';
     bot.emit('text', fakeMsg);
+  } else if (data === 'admin_login') {
+    fakeMsg.text = '/login';
+    bot.emit('text', fakeMsg);
   }
 });
 
 // Error handling
+// Handle reply keyboard button presses
+bot.on('message', async (msg) => {
+  const chatId = msg.chat.id;
+  const text = msg.text;
+  
+  // Skip if it's a command (starts with /)
+  if (text && text.startsWith('/')) {
+    return;
+  }
+  
+  // Handle reply keyboard buttons
+  if (text) {
+    switch (text) {
+      case '🔴 Disable Video':
+        // Create fake message to trigger existing handler
+        const disableMsg = { chat: { id: chatId }, text: '/disable_video', from: msg.from };
+        bot.emit('text', disableMsg);
+        break;
+        
+      case '🟢 Enable Video':
+        const enableMsg = { chat: { id: chatId }, text: '/enable_video', from: msg.from };
+        bot.emit('text', enableMsg);
+        break;
+        
+      case '🔗 Change URL':
+        const changeUrlMsg = { chat: { id: chatId }, text: '/change_url', from: msg.from };
+        bot.emit('text', changeUrlMsg);
+        break;
+        
+      case '💬 Toggle Chat':
+        const toggleChatMsg = { chat: { id: chatId }, text: '/toggle_chat', from: msg.from };
+        bot.emit('text', toggleChatMsg);
+        break;
+        
+      case '🗑️ Clear Messages':
+        const clearMsg = { chat: { id: chatId }, text: '/clear_messages', from: msg.from };
+        bot.emit('text', clearMsg);
+        break;
+        
+      case '📊 Platform Status':
+        const statusMsg = { chat: { id: chatId }, text: '/status', from: msg.from };
+        bot.emit('text', statusMsg);
+        break;
+        
+      case '📈 Statistics':
+        const statsMsg = { chat: { id: chatId }, text: '/get_stats', from: msg.from };
+        bot.emit('text', statsMsg);
+        break;
+        
+      case '🔗 Get Video URL':
+        const getUrlMsg = { chat: { id: chatId }, text: '/get_url', from: msg.from };
+        bot.emit('text', getUrlMsg);
+        break;
+        
+      case '🚪 Logout':
+        const logoutMsg = { chat: { id: chatId }, text: '/logout', from: msg.from };
+        bot.emit('text', logoutMsg);
+        break;
+        
+      default:
+        // Handle multi-step processes (email/password input)
+        const session = userSessions.get(chatId);
+        if (session) {
+          if (session.state === SESSION_STATES.WAITING_EMAIL) {
+            // Store email and ask for password
+            session.email = text;
+            session.state = SESSION_STATES.WAITING_PASSWORD;
+            userSessions.set(chatId, session);
+            await bot.sendMessage(chatId, '🔑 Please enter your password:');
+          } else if (session.state === SESSION_STATES.WAITING_PASSWORD) {
+            // Perform login with stored email and entered password
+            const email = session.email;
+            const password = text;
+            userSessions.delete(chatId); // Clear session
+            await performLogin(chatId, email, password);
+          } else if (session.state === SESSION_STATES.WAITING_URL) {
+            // Perform URL change
+            const newUrl = text;
+            userSessions.delete(chatId); // Clear session
+            await performUrlChange(chatId, newUrl);
+          }
+        }
+        break;
+    }
+  }
+});
+
 bot.on('error', (error) => {
   console.error('Bot error:', error);
 });

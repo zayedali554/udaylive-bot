@@ -1,10 +1,7 @@
 const config = require('../../config');
 const supabaseService = require('../../supabase');
 
-// Store authenticated admin sessions with timestamps (in-memory for serverless)
-const adminSessions = new Map(); // chatId -> { timestamp, email }
-
-// Store user interaction sessions for multi-step processes
+// Store user interaction sessions for multi-step processes (temporary, per-request)
 const userSessions = new Map();
 
 // Session timeout (24 hours in milliseconds)
@@ -17,23 +14,109 @@ const SESSION_STATES = {
   WAITING_URL: 'waiting_url'
 };
 
+// Utility function to store admin session in existing admin table
+async function storeAdminSession(chatId, email) {
+  try {
+    const sessionData = {
+      id: `session_${chatId}`,
+      email: email,
+      timestamp: Date.now(),
+      expires_at: new Date(Date.now() + SESSION_TIMEOUT).toISOString()
+    };
+
+    const { error } = await supabaseService.client
+      .from('admin')
+      .upsert(sessionData);
+
+    if (error) {
+      console.error('Error storing admin session:', error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Error in storeAdminSession:', error);
+    return false;
+  }
+}
+
+// Utility function to get admin session from existing admin table
+async function getAdminSession(chatId) {
+  try {
+    const { data, error } = await supabaseService.client
+      .from('admin')
+      .select('*')
+      .eq('id', `session_${chatId}`)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    // Check if session has expired
+    const now = Date.now();
+    if (now > new Date(data.expires_at).getTime()) {
+      // Session expired, remove it
+      await removeAdminSession(chatId);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error getting admin session:', error);
+    return null;
+  }
+}
+
+// Utility function to remove admin session from existing admin table
+async function removeAdminSession(chatId) {
+  try {
+    const { error } = await supabaseService.client
+      .from('admin')
+      .delete()
+      .eq('id', `session_${chatId}`);
+
+    if (error) {
+      console.error('Error removing admin session:', error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Error in removeAdminSession:', error);
+    return false;
+  }
+}
+
+// Utility function to update admin session timestamp
+async function updateAdminSessionTimestamp(chatId) {
+  try {
+    const { error } = await supabaseService.client
+      .from('admin')
+      .update({
+        timestamp: Date.now(),
+        expires_at: new Date(Date.now() + SESSION_TIMEOUT).toISOString()
+      })
+      .eq('id', `session_${chatId}`);
+
+    if (error) {
+      console.error('Error updating admin session timestamp:', error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Error in updateAdminSessionTimestamp:', error);
+    return false;
+  }
+}
+
 // Utility function to check if user is authenticated admin
-function isAdminAuthenticated(chatId) {
-  const session = adminSessions.get(chatId);
+async function isAdminAuthenticated(chatId) {
+  const session = await getAdminSession(chatId);
   if (!session) {
     return false;
   }
   
-  // Check if session has expired
-  const now = Date.now();
-  if (now - session.timestamp > SESSION_TIMEOUT) {
-    // Session expired, remove it
-    adminSessions.delete(chatId);
-    return false;
-  }
-  
   // Session is valid, update timestamp for activity
-  session.timestamp = now;
+  await updateAdminSessionTimestamp(chatId);
   return true;
 }
 
@@ -94,40 +177,24 @@ async function performLogin(chatId, email, password) {
     const result = await supabaseService.checkAdminAuth(email, password);
     
     if (result.success) {
-      // Store session with timestamp and email
-      adminSessions.set(chatId, {
-        timestamp: Date.now(),
-        email: email
-      });
+      // Store session in Supabase
+      const sessionStored = await storeAdminSession(chatId, email);
       
-      const adminKeyboard = createReplyKeyboard([
-        [
-          { text: '🔴 Disable Video' },
-          { text: '🟢 Enable Video' }
-        ],
-        [
-          { text: '🔗 Change URL' },
-          { text: '💬 Toggle Chat' }
-        ],
-        [
-          { text: '🗑️ Clear Messages' },
-          { text: '📊 Platform Status' }
-        ],
-        [
-          { text: '📈 Statistics' },
-          { text: '🔗 Get Video URL' }
-        ],
-        [
-          { text: '🚪 Logout' }
-        ]
-      ]);
-      
-      await sendMessage(chatId, '✅ *Login successful!*\n\nYou are now authenticated as admin.\n🕒 *Session valid for 24 hours*\n\n👇 *Choose an admin action:*', adminKeyboard);
+      if (sessionStored) {
+        await sendMessage(chatId, `✅ *Login Successful!*\n\nWelcome back, admin!\nYou are now authenticated for 24 hours.\n\n*Available Admin Commands:*\n/disablevideo - Disable video streaming\n/enablevideo - Enable video streaming\n/changeurl - Change video source URL\n/togglechat - Toggle chat on/off\n/get_stats - Get platform statistics\n/logout - Logout from admin session`);
+        return true;
+      } else {
+        await sendMessage(chatId, '❌ *Session Storage Error*\n\nLogin successful but failed to store session. Please try again.');
+        return false;
+      }
     } else {
-      await sendMessage(chatId, `❌ *Login failed.*\n\n${result.error || 'Invalid credentials'}\n\nPlease try again with /login`, { parse_mode: 'Markdown' });
+      await sendMessage(chatId, `❌ *Login Failed*\n\n${result.error || 'Invalid credentials'}\n\nPlease try again with correct email and password.`);
+      return false;
     }
   } catch (error) {
     console.error('Login error:', error);
+    await sendMessage(chatId, '❌ *Login Error*\n\nSomething went wrong during login. Please try again later.');
+    return false;
     await sendMessage(chatId, '🔥 *Error during login.*\n\nPlease try again later.', { parse_mode: 'Markdown' });
   }
 }
@@ -342,10 +409,15 @@ This bot allows you to control your video streaming platform remotely.
       break;
 
     case '/logout':
-      if (isAdminAuthenticated(chatId)) {
-        adminSessions.delete(chatId);
+      if (await isAdminAuthenticated(chatId)) {
+        const loggedOut = await removeAdminSession(chatId);
         supabaseService.clearAdminCredentials();
-        await sendMessage(chatId, '👋 *Logged out successfully!*\n\nYour admin session has been ended.\nUse /login to authenticate again.', { parse_mode: 'Markdown' });
+        
+        if (loggedOut) {
+          await sendMessage(chatId, '👋 *Logged out successfully!*\n\nYour admin session has been ended.\nUse /login to authenticate again.', { parse_mode: 'Markdown' });
+        } else {
+          await sendMessage(chatId, '⚠️ *Logout completed but session cleanup failed.*\n\nYou may need to wait for session expiry.', { parse_mode: 'Markdown' });
+        }
       } else {
         await sendMessage(chatId, '❌ You are not currently logged in.\n\nUse /login to authenticate first.');
       }
@@ -418,7 +490,7 @@ This bot allows you to control your video streaming platform remotely.
       console.log('Disable video command received from chatId:', chatId);
       console.log('Admin sessions:', Array.from(adminSessions));
 
-      if (!isAdminAuthenticated(chatId)) {
+      if (!(await isAdminAuthenticated(chatId))) {
         console.log('User not authenticated, sending auth required message');
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
@@ -447,7 +519,7 @@ This bot allows you to control your video streaming platform remotely.
       console.log('Enable video command received from chatId:', chatId);
       console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
 
-      if (!isAdminAuthenticated(chatId)) {
+      if (!(await isAdminAuthenticated(chatId))) {
         console.log('User not authenticated, sending auth required message');
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
@@ -476,7 +548,7 @@ This bot allows you to control your video streaming platform remotely.
       console.log('Change URL command received from chatId:', chatId);
       console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
 
-      if (!isAdminAuthenticated(chatId)) {
+      if (!(await isAdminAuthenticated(chatId))) {
         console.log('User not authenticated, sending auth required message');
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
@@ -501,7 +573,7 @@ This bot allows you to control your video streaming platform remotely.
     case '/clearmessages':
       console.log('Clear messages command received from chatId:', chatId);
       
-      if (!isAdminAuthenticated(chatId)) {
+      if (!(await isAdminAuthenticated(chatId))) {
         console.log('User not authenticated, sending auth required message');
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
@@ -530,7 +602,7 @@ This bot allows you to control your video streaming platform remotely.
       console.log('Toggle chat command received from chatId:', chatId);
       console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
 
-      if (!isAdminAuthenticated(chatId)) {
+      if (!(await isAdminAuthenticated(chatId))) {
         console.log('User not authenticated, sending auth required message');
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
