@@ -257,6 +257,12 @@ async function performLogin(chatId, email, password) {
 // Function to perform URL change
 async function performUrlChange(chatId, newUrl) {
   try {
+    // Ensure credentials are restored before admin operations
+    console.log('Restoring admin credentials before URL change operation');
+    const urlChangeCredsRestored = await restoreAdminCredentials(chatId);
+    console.log('Credentials restored:', urlChangeCredsRestored);
+    console.log('Admin credentials exist:', !!supabaseService.adminCredentials);
+    
     console.log('Attempting URL change to:', newUrl);
     const success = await supabaseService.updateVideoSource(newUrl);
     
@@ -551,6 +557,12 @@ This bot allows you to control your video streaming platform remotely.
         return;
       }
 
+      // Ensure credentials are restored before admin operations
+      console.log('Restoring admin credentials before disable video operation');
+      const disableVideoCredsRestored = await restoreAdminCredentials(chatId);
+      console.log('Credentials restored:', disableVideoCredsRestored);
+      console.log('Admin credentials exist:', !!supabaseService.adminCredentials);
+
       try {
         console.log('Attempting to disable video streaming...');
         const success = await supabaseService.updateVideoLiveStatus(false);
@@ -579,6 +591,12 @@ This bot allows you to control your video streaming platform remotely.
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
       }
+
+      // Ensure credentials are restored before admin operations
+      console.log('Restoring admin credentials before enable video operation');
+      const enableVideoCredsRestored = await restoreAdminCredentials(chatId);
+      console.log('Credentials restored:', enableVideoCredsRestored);
+      console.log('Admin credentials exist:', !!supabaseService.adminCredentials);
 
       try {
         console.log('Attempting to enable video streaming...');
@@ -634,6 +652,12 @@ This bot allows you to control your video streaming platform remotely.
         return;
       }
 
+      // Ensure credentials are restored before admin operations
+      console.log('Restoring admin credentials before clear messages operation');
+      const clearMsgCredsRestored = await restoreAdminCredentials(chatId);
+      console.log('Credentials restored:', clearMsgCredsRestored);
+      console.log('Admin credentials exist:', !!supabaseService.adminCredentials);
+
       try {
         console.log('Attempting to clear all messages...');
         const success = await supabaseService.clearMessages();
@@ -662,6 +686,12 @@ This bot allows you to control your video streaming platform remotely.
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
       }
+
+      // Ensure credentials are restored before admin operations
+      console.log('Restoring admin credentials before chat toggle operation');
+      const chatToggleCredsRestored = await restoreAdminCredentials(chatId);
+      console.log('Credentials restored:', chatToggleCredsRestored);
+      console.log('Admin credentials exist:', !!supabaseService.adminCredentials);
 
       try {
         const currentStatus = await supabaseService.getChatStatus();
