@@ -488,7 +488,7 @@ This bot allows you to control your video streaming platform remotely.
     case '/disable_video':
     case '/disablevideo':
       console.log('Disable video command received from chatId:', chatId);
-      console.log('Admin sessions:', Array.from(adminSessions));
+      console.log('Checking admin authentication for chatId:', chatId);
 
       if (!(await isAdminAuthenticated(chatId))) {
         console.log('User not authenticated, sending auth required message');
