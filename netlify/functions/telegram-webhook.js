@@ -517,7 +517,7 @@ This bot allows you to control your video streaming platform remotely.
     case '/enable_video':
     case '/enablevideo':
       console.log('Enable video command received from chatId:', chatId);
-      console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
+      console.log('Checking admin authentication for chatId:', chatId);
 
       if (!(await isAdminAuthenticated(chatId))) {
         console.log('User not authenticated, sending auth required message');
@@ -546,7 +546,7 @@ This bot allows you to control your video streaming platform remotely.
     case '/change_url':
     case '/changeurl':
       console.log('Change URL command received from chatId:', chatId);
-      console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
+      console.log('Checking admin authentication for chatId:', chatId);
 
       if (!(await isAdminAuthenticated(chatId))) {
         console.log('User not authenticated, sending auth required message');
@@ -600,7 +600,7 @@ This bot allows you to control your video streaming platform remotely.
     case '/toggle_chat':
     case '/togglechat':
       console.log('Toggle chat command received from chatId:', chatId);
-      console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
+      console.log('Checking admin authentication for chatId:', chatId);
 
       if (!(await isAdminAuthenticated(chatId))) {
         console.log('User not authenticated, sending auth required message');
