@@ -333,9 +333,9 @@ This bot allows you to control your video streaming platform remotely.
     case '/login':
       if (msg.text.trim() === '/login') {
         // Interactive login
-        if (isAdminAuthenticated(chatId)) {
+        if (await isAdminAuthenticated(chatId)) {
           // Show admin menu since user is already authenticated
-          const session = adminSessions.get(chatId);
+          const session = await getAdminSession(chatId);
           const adminKeyboard = createReplyKeyboard([
             [
               { text: '🔴 Disable Video' },
@@ -365,9 +365,9 @@ This bot allows you to control your video streaming platform remotely.
         await sendMessage(chatId, '🔑 Admin Login Process\n\nPlease enter your email address:');
       } else {
         // Legacy login format
-        if (isAdminAuthenticated(chatId)) {
+        if (await isAdminAuthenticated(chatId)) {
           // Show admin menu since user is already authenticated
-          const session = adminSessions.get(chatId);
+          const session = await getAdminSession(chatId);
           const adminKeyboard = createReplyKeyboard([
             [
               { text: '🔴 Disable Video' },
