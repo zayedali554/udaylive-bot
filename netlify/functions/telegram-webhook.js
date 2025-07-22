@@ -1,7 +1,10 @@
 const config = require('../../config');
 const supabaseService = require('../../supabase');
 
-// Store user interaction sessions for multi-step processes (temporary, per-request)
+// Store authenticated admin sessions with timestamps (in-memory for serverless)
+const adminSessions = new Map(); // chatId -> { timestamp, email }
+
+// Store user interaction sessions for multi-step processes
 const userSessions = new Map();
 
 // Session timeout (24 hours in milliseconds)
@@ -14,142 +17,23 @@ const SESSION_STATES = {
   WAITING_URL: 'waiting_url'
 };
 
-// Utility function to store admin session in existing admin table
-async function storeAdminSession(chatId, email, password) {
-  try {
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + SESSION_TIMEOUT);
-    
-    const sessionData = {
-      id: `session_${chatId}`,
-      email: email,
-      password: password, // Store password for serverless function persistence
-      timestamp: now.toISOString(),
-      expires_at: expiresAt.toISOString()
-    };
-
-    const { error } = await supabaseService.client
-      .from('admin')
-      .upsert(sessionData);
-
-    if (error) {
-      console.error('Error storing admin session:', error);
-      return false;
-    }
-    return true;
-  } catch (error) {
-    console.error('Error in storeAdminSession:', error);
-    return false;
-  }
-}
-
-// Utility function to restore admin credentials from session
-async function restoreAdminCredentials(chatId) {
-  try {
-    const session = await getAdminSession(chatId);
-    if (session && session.email && session.password) {
-      // Restore credentials to supabaseService for this request
-      supabaseService.adminCredentials = {
-        email: session.email,
-        password: session.password
-      };
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error('Error restoring admin credentials:', error);
-    return false;
-  }
-}
-
-// Utility function to get admin session from existing admin table
-async function getAdminSession(chatId) {
-  try {
-    const { data, error } = await supabaseService.client
-      .from('admin')
-      .select('*')
-      .eq('id', `session_${chatId}`)
-      .single();
-
-    if (error || !data) {
-      return null;
-    }
-
-    // Check if session has expired
-    const now = Date.now();
-    if (now > new Date(data.expires_at).getTime()) {
-      // Session expired, remove it
-      await removeAdminSession(chatId);
-      return null;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Error getting admin session:', error);
-    return null;
-  }
-}
-
-// Utility function to remove admin session from existing admin table
-async function removeAdminSession(chatId) {
-  try {
-    const { error } = await supabaseService.client
-      .from('admin')
-      .delete()
-      .eq('id', `session_${chatId}`);
-
-    if (error) {
-      console.error('Error removing admin session:', error);
-      return false;
-    }
-    
-    // Clear credentials from current instance
-    supabaseService.clearAdminCredentials();
-    
-    return true;
-  } catch (error) {
-    console.error('Error in removeAdminSession:', error);
-    return false;
-  }
-}
-
-// Utility function to update admin session timestamp
-async function updateAdminSessionTimestamp(chatId) {
-  try {
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + SESSION_TIMEOUT);
-    
-    const { error } = await supabaseService.client
-      .from('admin')
-      .update({
-        timestamp: now.toISOString(),
-        expires_at: expiresAt.toISOString()
-      })
-      .eq('id', `session_${chatId}`);
-
-    if (error) {
-      console.error('Error updating admin session timestamp:', error);
-      return false;
-    }
-    return true;
-  } catch (error) {
-    console.error('Error in updateAdminSessionTimestamp:', error);
-    return false;
-  }
-}
-
 // Utility function to check if user is authenticated admin
-async function isAdminAuthenticated(chatId) {
-  const session = await getAdminSession(chatId);
+function isAdminAuthenticated(chatId) {
+  const session = adminSessions.get(chatId);
   if (!session) {
     return false;
   }
   
-  // Session is valid, restore admin credentials for this request
-  await restoreAdminCredentials(chatId);
+  // Check if session has expired
+  const now = Date.now();
+  if (now - session.timestamp > SESSION_TIMEOUT) {
+    // Session expired, remove it
+    adminSessions.delete(chatId);
+    return false;
+  }
   
-  // Update timestamp for activity
-  await updateAdminSessionTimestamp(chatId);
+  // Session is valid, update timestamp for activity
+  session.timestamp = now;
   return true;
 }
 
@@ -210,59 +94,47 @@ async function performLogin(chatId, email, password) {
     const result = await supabaseService.checkAdminAuth(email, password);
     
     if (result.success) {
-      // Store session in Supabase with credentials
-      const sessionStored = await storeAdminSession(chatId, email, password);
+      // Store session with timestamp and email
+      adminSessions.set(chatId, {
+        timestamp: Date.now(),
+        email: email
+      });
       
-      if (sessionStored) {
-        // Show admin menu after successful login
-        const adminKeyboard = createReplyKeyboard([
-          [
-            { text: '🔴 Disable Video' },
-            { text: '🟢 Enable Video' }
-          ],
-          [
-            { text: '🔗 Change URL' },
-            { text: '💬 Toggle Chat' }
-          ],
-          [
-            { text: '🗑️ Clear Messages' },
-            { text: '📊 Platform Status' }
-          ],
-          [
-            { text: '📈 Statistics' },
-            { text: '🔗 Get Video URL' }
-          ],
-          [
-            { text: '🚪 Logout' }
-          ]
-        ]);
-        
-        await sendMessage(chatId, `✅ *Login Successful!*\n\nWelcome back, admin!\nYou are now authenticated for 24 hours.\n\n👇 *Choose an admin action:*`, adminKeyboard);
-        return true;
-      } else {
-        await sendMessage(chatId, '❌ *Session Storage Error*\n\nLogin successful but failed to store session. Please try again.');
-        return false;
-      }
+      const adminKeyboard = createReplyKeyboard([
+        [
+          { text: '🔴 Disable Video' },
+          { text: '🟢 Enable Video' }
+        ],
+        [
+          { text: '🔗 Change URL' },
+          { text: '💬 Toggle Chat' }
+        ],
+        [
+          { text: '🗑️ Clear Messages' },
+          { text: '📊 Platform Status' }
+        ],
+        [
+          { text: '📈 Statistics' },
+          { text: '🔗 Get Video URL' }
+        ],
+        [
+          { text: '🚪 Logout' }
+        ]
+      ]);
+      
+      await sendMessage(chatId, '✅ *Login successful!*\n\nYou are now authenticated as admin.\n🕒 *Session valid for 24 hours*\n\n👇 *Choose an admin action:*', adminKeyboard);
     } else {
-      await sendMessage(chatId, `❌ *Login Failed*\n\n${result.error || 'Invalid credentials'}\n\nPlease try again with correct email and password.`);
-      return false;
+      await sendMessage(chatId, `❌ *Login failed.*\n\n${result.error || 'Invalid credentials'}\n\nPlease try again with /login`, { parse_mode: 'Markdown' });
     }
   } catch (error) {
     console.error('Login error:', error);
-    await sendMessage(chatId, '❌ *Login Error*\n\nSomething went wrong during login. Please try again later.');
-    return false;
+    await sendMessage(chatId, '🔥 *Error during login.*\n\nPlease try again later.', { parse_mode: 'Markdown' });
   }
 }
 
 // Function to perform URL change
 async function performUrlChange(chatId, newUrl) {
   try {
-    // Ensure credentials are restored before admin operations
-    console.log('Restoring admin credentials before URL change operation');
-    const urlChangeCredsRestored = await restoreAdminCredentials(chatId);
-    console.log('Credentials restored:', urlChangeCredsRestored);
-    console.log('Admin credentials exist:', !!supabaseService.adminCredentials);
-    
     console.log('Attempting URL change to:', newUrl);
     const success = await supabaseService.updateVideoSource(newUrl);
     
@@ -394,9 +266,9 @@ This bot allows you to control your video streaming platform remotely.
     case '/login':
       if (msg.text.trim() === '/login') {
         // Interactive login
-        if (await isAdminAuthenticated(chatId)) {
+        if (isAdminAuthenticated(chatId)) {
           // Show admin menu since user is already authenticated
-          const session = await getAdminSession(chatId);
+          const session = adminSessions.get(chatId);
           const adminKeyboard = createReplyKeyboard([
             [
               { text: '🔴 Disable Video' },
@@ -426,9 +298,9 @@ This bot allows you to control your video streaming platform remotely.
         await sendMessage(chatId, '🔑 Admin Login Process\n\nPlease enter your email address:');
       } else {
         // Legacy login format
-        if (await isAdminAuthenticated(chatId)) {
+        if (isAdminAuthenticated(chatId)) {
           // Show admin menu since user is already authenticated
-          const session = await getAdminSession(chatId);
+          const session = adminSessions.get(chatId);
           const adminKeyboard = createReplyKeyboard([
             [
               { text: '🔴 Disable Video' },
@@ -470,15 +342,10 @@ This bot allows you to control your video streaming platform remotely.
       break;
 
     case '/logout':
-      if (await isAdminAuthenticated(chatId)) {
-        const loggedOut = await removeAdminSession(chatId);
+      if (isAdminAuthenticated(chatId)) {
+        adminSessions.delete(chatId);
         supabaseService.clearAdminCredentials();
-        
-        if (loggedOut) {
-          await sendMessage(chatId, '👋 *Logged out successfully!*\n\nYour admin session has been ended.\nUse /login to authenticate again.', { parse_mode: 'Markdown' });
-        } else {
-          await sendMessage(chatId, '⚠️ *Logout completed but session cleanup failed.*\n\nYou may need to wait for session expiry.', { parse_mode: 'Markdown' });
-        }
+        await sendMessage(chatId, '👋 *Logged out successfully!*\n\nYour admin session has been ended.\nUse /login to authenticate again.', { parse_mode: 'Markdown' });
       } else {
         await sendMessage(chatId, '❌ You are not currently logged in.\n\nUse /login to authenticate first.');
       }
@@ -549,19 +416,13 @@ This bot allows you to control your video streaming platform remotely.
     case '/disable_video':
     case '/disablevideo':
       console.log('Disable video command received from chatId:', chatId);
-      console.log('Checking admin authentication for chatId:', chatId);
+      console.log('Admin sessions:', Array.from(adminSessions));
 
-      if (!(await isAdminAuthenticated(chatId))) {
+      if (!isAdminAuthenticated(chatId)) {
         console.log('User not authenticated, sending auth required message');
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
       }
-
-      // Ensure credentials are restored before admin operations
-      console.log('Restoring admin credentials before disable video operation');
-      const disableVideoCredsRestored = await restoreAdminCredentials(chatId);
-      console.log('Credentials restored:', disableVideoCredsRestored);
-      console.log('Admin credentials exist:', !!supabaseService.adminCredentials);
 
       try {
         console.log('Attempting to disable video streaming...');
@@ -584,19 +445,13 @@ This bot allows you to control your video streaming platform remotely.
     case '/enable_video':
     case '/enablevideo':
       console.log('Enable video command received from chatId:', chatId);
-      console.log('Checking admin authentication for chatId:', chatId);
+      console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
 
-      if (!(await isAdminAuthenticated(chatId))) {
+      if (!isAdminAuthenticated(chatId)) {
         console.log('User not authenticated, sending auth required message');
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
       }
-
-      // Ensure credentials are restored before admin operations
-      console.log('Restoring admin credentials before enable video operation');
-      const enableVideoCredsRestored = await restoreAdminCredentials(chatId);
-      console.log('Credentials restored:', enableVideoCredsRestored);
-      console.log('Admin credentials exist:', !!supabaseService.adminCredentials);
 
       try {
         console.log('Attempting to enable video streaming...');
@@ -619,9 +474,9 @@ This bot allows you to control your video streaming platform remotely.
     case '/change_url':
     case '/changeurl':
       console.log('Change URL command received from chatId:', chatId);
-      console.log('Checking admin authentication for chatId:', chatId);
+      console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
 
-      if (!(await isAdminAuthenticated(chatId))) {
+      if (!isAdminAuthenticated(chatId)) {
         console.log('User not authenticated, sending auth required message');
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
@@ -646,17 +501,11 @@ This bot allows you to control your video streaming platform remotely.
     case '/clearmessages':
       console.log('Clear messages command received from chatId:', chatId);
       
-      if (!(await isAdminAuthenticated(chatId))) {
+      if (!isAdminAuthenticated(chatId)) {
         console.log('User not authenticated, sending auth required message');
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
       }
-
-      // Ensure credentials are restored before admin operations
-      console.log('Restoring admin credentials before clear messages operation');
-      const clearMsgCredsRestored = await restoreAdminCredentials(chatId);
-      console.log('Credentials restored:', clearMsgCredsRestored);
-      console.log('Admin credentials exist:', !!supabaseService.adminCredentials);
 
       try {
         console.log('Attempting to clear all messages...');
@@ -679,19 +528,13 @@ This bot allows you to control your video streaming platform remotely.
     case '/toggle_chat':
     case '/togglechat':
       console.log('Toggle chat command received from chatId:', chatId);
-      console.log('Checking admin authentication for chatId:', chatId);
+      console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
 
-      if (!(await isAdminAuthenticated(chatId))) {
+      if (!isAdminAuthenticated(chatId)) {
         console.log('User not authenticated, sending auth required message');
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
       }
-
-      // Ensure credentials are restored before admin operations
-      console.log('Restoring admin credentials before chat toggle operation');
-      const chatToggleCredsRestored = await restoreAdminCredentials(chatId);
-      console.log('Credentials restored:', chatToggleCredsRestored);
-      console.log('Admin credentials exist:', !!supabaseService.adminCredentials);
 
       try {
         const currentStatus = await supabaseService.getChatStatus();
