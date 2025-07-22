@@ -17,11 +17,14 @@ const SESSION_STATES = {
 // Utility function to store admin session in existing admin table
 async function storeAdminSession(chatId, email) {
   try {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + SESSION_TIMEOUT);
+    
     const sessionData = {
       id: `session_${chatId}`,
       email: email,
-      timestamp: Math.floor(Date.now() / 1000),
-      expires_at: new Date(Date.now() + SESSION_TIMEOUT).toISOString().replace('T', ' ').replace('Z', '')
+      timestamp: now.toISOString(),
+      expires_at: expiresAt.toISOString()
     };
 
     const { error } = await supabaseService.client
@@ -89,11 +92,14 @@ async function removeAdminSession(chatId) {
 // Utility function to update admin session timestamp
 async function updateAdminSessionTimestamp(chatId) {
   try {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + SESSION_TIMEOUT);
+    
     const { error } = await supabaseService.client
       .from('admin')
       .update({
-        timestamp: Math.floor(Date.now() / 1000),
-        expires_at: new Date(Date.now() + SESSION_TIMEOUT).toISOString().replace('T', ' ').replace('Z', '')
+        timestamp: now.toISOString(),
+        expires_at: expiresAt.toISOString()
       })
       .eq('id', `session_${chatId}`);
 
@@ -181,7 +187,30 @@ async function performLogin(chatId, email, password) {
       const sessionStored = await storeAdminSession(chatId, email);
       
       if (sessionStored) {
-        await sendMessage(chatId, `✅ *Login Successful!*\n\nWelcome back, admin!\nYou are now authenticated for 24 hours.\n\n*Available Admin Commands:*\n/disablevideo - Disable video streaming\n/enablevideo - Enable video streaming\n/changeurl - Change video source URL\n/togglechat - Toggle chat on/off\n/get_stats - Get platform statistics\n/logout - Logout from admin session`);
+        // Show admin menu after successful login
+        const adminKeyboard = createReplyKeyboard([
+          [
+            { text: '🔴 Disable Video' },
+            { text: '🟢 Enable Video' }
+          ],
+          [
+            { text: '🔗 Change URL' },
+            { text: '💬 Toggle Chat' }
+          ],
+          [
+            { text: '🗑️ Clear Messages' },
+            { text: '📊 Platform Status' }
+          ],
+          [
+            { text: '📈 Statistics' },
+            { text: '🔗 Get Video URL' }
+          ],
+          [
+            { text: '🚪 Logout' }
+          ]
+        ]);
+        
+        await sendMessage(chatId, `✅ *Login Successful!*\n\nWelcome back, admin!\nYou are now authenticated for 24 hours.\n\n👇 *Choose an admin action:*`, adminKeyboard);
         return true;
       } else {
         await sendMessage(chatId, '❌ *Session Storage Error*\n\nLogin successful but failed to store session. Please try again.');
@@ -195,7 +224,6 @@ async function performLogin(chatId, email, password) {
     console.error('Login error:', error);
     await sendMessage(chatId, '❌ *Login Error*\n\nSomething went wrong during login. Please try again later.');
     return false;
-    await sendMessage(chatId, '🔥 *Error during login.*\n\nPlease try again later.', { parse_mode: 'Markdown' });
   }
 }
 
