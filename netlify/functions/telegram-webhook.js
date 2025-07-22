@@ -15,7 +15,7 @@ const SESSION_STATES = {
 };
 
 // Utility function to store admin session in existing admin table
-async function storeAdminSession(chatId, email) {
+async function storeAdminSession(chatId, email, password) {
   try {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + SESSION_TIMEOUT);
@@ -23,6 +23,7 @@ async function storeAdminSession(chatId, email) {
     const sessionData = {
       id: `session_${chatId}`,
       email: email,
+      password: password, // Store password for serverless function persistence
       timestamp: now.toISOString(),
       expires_at: expiresAt.toISOString()
     };
@@ -38,6 +39,25 @@ async function storeAdminSession(chatId, email) {
     return true;
   } catch (error) {
     console.error('Error in storeAdminSession:', error);
+    return false;
+  }
+}
+
+// Utility function to restore admin credentials from session
+async function restoreAdminCredentials(chatId) {
+  try {
+    const session = await getAdminSession(chatId);
+    if (session && session.email && session.password) {
+      // Restore credentials to supabaseService for this request
+      supabaseService.adminCredentials = {
+        email: session.email,
+        password: session.password
+      };
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error restoring admin credentials:', error);
     return false;
   }
 }
@@ -82,6 +102,10 @@ async function removeAdminSession(chatId) {
       console.error('Error removing admin session:', error);
       return false;
     }
+    
+    // Clear credentials from current instance
+    supabaseService.clearAdminCredentials();
+    
     return true;
   } catch (error) {
     console.error('Error in removeAdminSession:', error);
@@ -121,7 +145,10 @@ async function isAdminAuthenticated(chatId) {
     return false;
   }
   
-  // Session is valid, update timestamp for activity
+  // Session is valid, restore admin credentials for this request
+  await restoreAdminCredentials(chatId);
+  
+  // Update timestamp for activity
   await updateAdminSessionTimestamp(chatId);
   return true;
 }
@@ -183,8 +210,8 @@ async function performLogin(chatId, email, password) {
     const result = await supabaseService.checkAdminAuth(email, password);
     
     if (result.success) {
-      // Store session in Supabase
-      const sessionStored = await storeAdminSession(chatId, email);
+      // Store session in Supabase with credentials
+      const sessionStored = await storeAdminSession(chatId, email, password);
       
       if (sessionStored) {
         // Show admin menu after successful login
