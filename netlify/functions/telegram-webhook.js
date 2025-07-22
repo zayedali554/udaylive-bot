@@ -20,8 +20,8 @@ async function storeAdminSession(chatId, email) {
     const sessionData = {
       id: `session_${chatId}`,
       email: email,
-      timestamp: Date.now(),
-      expires_at: new Date(Date.now() + SESSION_TIMEOUT).toISOString()
+      timestamp: Math.floor(Date.now() / 1000),
+      expires_at: new Date(Date.now() + SESSION_TIMEOUT).toISOString().replace('T', ' ').replace('Z', '')
     };
 
     const { error } = await supabaseService.client
@@ -92,8 +92,8 @@ async function updateAdminSessionTimestamp(chatId) {
     const { error } = await supabaseService.client
       .from('admin')
       .update({
-        timestamp: Date.now(),
-        expires_at: new Date(Date.now() + SESSION_TIMEOUT).toISOString()
+        timestamp: Math.floor(Date.now() / 1000),
+        expires_at: new Date(Date.now() + SESSION_TIMEOUT).toISOString().replace('T', ' ').replace('Z', '')
       })
       .eq('id', `session_${chatId}`);
 
