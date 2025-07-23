@@ -245,7 +245,7 @@ This bot allows you to control your video streaming platform remotely.
         // Interactive login
         if (isAdminAuthenticated(chatId)) {
           // Show admin menu since user is already authenticated
-          const session = adminSessions.get(chatId);
+          const session = sessionStorage.getSession(chatId);
           const adminKeyboard = createReplyKeyboard([
             [
               { text: '🔴 Disable Video' },
@@ -277,7 +277,7 @@ This bot allows you to control your video streaming platform remotely.
         // Legacy login format
         if (isAdminAuthenticated(chatId)) {
           // Show admin menu since user is already authenticated
-          const session = adminSessions.get(chatId);
+          const session = sessionStorage.getSession(chatId);
           const adminKeyboard = createReplyKeyboard([
             [
               { text: '🔴 Disable Video' },
@@ -315,16 +315,6 @@ This bot allows you to control your video streaming platform remotely.
         const email = parts[0];
         const password = parts.slice(1).join(' ');
         await performLogin(chatId, email, password);
-      }
-      break;
-
-    case '/logout':
-      if (isAdminAuthenticated(chatId)) {
-        adminSessions.delete(chatId);
-        supabaseService.clearAdminCredentials();
-        await sendMessage(chatId, '👋 *Logged out successfully!*\n\nYour admin session has been ended.\nUse /login to authenticate again.', { parse_mode: 'Markdown' });
-      } else {
-        await sendMessage(chatId, '❌ You are not currently logged in.\n\nUse /login to authenticate first.');
       }
       break;
 
@@ -393,7 +383,7 @@ This bot allows you to control your video streaming platform remotely.
     case '/disable_video':
     case '/disablevideo':
       console.log('Disable video command received from chatId:', chatId);
-      console.log('Admin sessions:', Array.from(adminSessions));
+      console.log('Admin sessions check - authenticated:', isAdminAuthenticated(chatId));
 
       if (!isAdminAuthenticated(chatId)) {
         console.log('User not authenticated, sending auth required message');
