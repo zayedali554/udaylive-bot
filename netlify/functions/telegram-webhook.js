@@ -1,14 +1,9 @@
 const config = require('../../config');
 const supabaseService = require('../../supabase');
+const sessionStorage = require('../../session-storage');
 
-// Store authenticated admin sessions with timestamps (in-memory for serverless)
-const adminSessions = new Map(); // chatId -> { timestamp, email }
-
-// Store user interaction sessions for multi-step processes
+// Store user interaction sessions for multi-step processes (temporary)
 const userSessions = new Map();
-
-// Session timeout (24 hours in milliseconds)
-const SESSION_TIMEOUT = 24 * 60 * 60 * 1000;
 
 // Session states
 const SESSION_STATES = {
@@ -19,22 +14,7 @@ const SESSION_STATES = {
 
 // Utility function to check if user is authenticated admin
 function isAdminAuthenticated(chatId) {
-  const session = adminSessions.get(chatId);
-  if (!session) {
-    return false;
-  }
-  
-  // Check if session has expired
-  const now = Date.now();
-  if (now - session.timestamp > SESSION_TIMEOUT) {
-    // Session expired, remove it
-    adminSessions.delete(chatId);
-    return false;
-  }
-  
-  // Session is valid, update timestamp for activity
-  session.timestamp = now;
-  return true;
+  return sessionStorage.isAuthenticated(chatId);
 }
 
 // Utility function to create inline keyboard
@@ -95,10 +75,7 @@ async function performLogin(chatId, email, password) {
     
     if (result.success) {
       // Store session with timestamp and email
-      adminSessions.set(chatId, {
-        timestamp: Date.now(),
-        email: email
-      });
+      sessionStorage.setSession(chatId, email);
       
       const adminKeyboard = createReplyKeyboard([
         [
@@ -551,6 +528,35 @@ This bot allows you to control your video streaming platform remotely.
         console.error('Toggle chat error:', error);
         await sendMessage(chatId, '🔥 Error toggling chat status.\n\nPlease try again later.');
       }
+      break;
+
+    case '/logout':
+      console.log('Logout command received from chatId:', chatId);
+      
+      if (!isAdminAuthenticated(chatId)) {
+        await sendMessage(chatId, '❌ *You are not logged in.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
+        return;
+      }
+      
+      // Remove session
+      sessionStorage.removeSession(chatId);
+      
+      // Show public keyboard
+      const publicKeyboard = createReplyKeyboard([
+        [
+          { text: '🔐 Admin Login' },
+          { text: '❓ Help & Commands' }
+        ],
+        [
+          { text: '📊 Platform Status' },
+          { text: '🔗 Get Video URL' }
+        ],
+        [
+          { text: '📈 Statistics' }
+        ]
+      ]);
+      
+      await sendMessage(chatId, '🚪 *Logged out successfully!*\n\nYour admin session has been ended.\n\n👇 *Choose an option:*', publicKeyboard);
       break;
 
     default:
