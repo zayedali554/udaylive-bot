@@ -24,16 +24,6 @@ class SessionStorage {
       if (error && error.code === 'PGRST116') {
         // Table doesn't exist, but we can't create it via JS client
         console.log('⚠️ bot_sessions table not found. Please create it manually in Supabase.');
-        console.log('SQL to create table:');
-        console.log(`
-CREATE TABLE bot_sessions (
-  chat_id TEXT PRIMARY KEY,
-  email TEXT NOT NULL,
-  timestamp BIGINT NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-`);
       }
     } catch (error) {
       console.error('Error checking sessions table:', error);
@@ -41,7 +31,7 @@ CREATE TABLE bot_sessions (
   }
 
   // Add/update session
-  async setSession(chatId, email) {
+  async setSession(chatId, email, password = null) {
     try {
       const sessionData = {
         chat_id: chatId.toString(),
@@ -49,6 +39,11 @@ CREATE TABLE bot_sessions (
         timestamp: Date.now(),
         updated_at: new Date().toISOString()
       };
+
+      // Store password if provided (for admin operations)
+      if (password) {
+        sessionData.password = password;
+      }
 
       const { data, error } = await supabase
         .from(this.tableName)

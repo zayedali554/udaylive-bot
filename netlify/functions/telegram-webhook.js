@@ -17,6 +17,20 @@ async function isAdminAuthenticated(chatId) {
   return await sessionStorage.isAuthenticated(chatId);
 }
 
+// Function to get admin credentials from session
+async function getAdminCredentials(chatId) {
+  try {
+    const session = await sessionStorage.getSession(chatId);
+    if (!session || !session.email || !session.password) {
+      throw new Error('No valid admin credentials found in session');
+    }
+    return { email: session.email, password: session.password };
+  } catch (error) {
+    console.error('Error getting admin credentials:', error);
+    return null;
+  }
+}
+
 // Utility function to create inline keyboard
 function createInlineKeyboard(buttons) {
   return {
@@ -74,8 +88,8 @@ async function performLogin(chatId, email, password) {
     const result = await supabaseService.checkAdminAuth(email, password);
     
     if (result.success) {
-      // Store session with timestamp and email
-      await sessionStorage.setSession(chatId, email);
+      // Store session with timestamp, email, and password for admin operations
+      await sessionStorage.setSession(chatId, email, password);
       
       const adminKeyboard = createReplyKeyboard([
         [
@@ -113,7 +127,12 @@ async function performLogin(chatId, email, password) {
 async function performUrlChange(chatId, newUrl) {
   try {
     console.log('Attempting URL change to:', newUrl);
-    const success = await supabaseService.updateVideoSource(newUrl);
+    const credentials = await getAdminCredentials(chatId);
+    if (!credentials) {
+      await sendMessage(chatId, '❌ *Admin credentials not found.*\n\nPlease login again with /login', { parse_mode: 'Markdown' });
+      return;
+    }
+    const success = await supabaseService.updateVideoSource(newUrl, credentials);
     
     if (success) {
       await sendMessage(chatId, `✅ *Video URL updated successfully!*\n\n🔗 *New URL:* ${newUrl}\n\nThe video source has been changed.`, { parse_mode: 'Markdown' });
@@ -396,7 +415,12 @@ This bot allows you to control your video streaming platform remotely.
 
       try {
         console.log('Attempting to disable video streaming...');
-        const success = await supabaseService.updateVideoLiveStatus(false);
+        const credentials = await getAdminCredentials(chatId);
+        if (!credentials) {
+          await sendMessage(chatId, '❌ *Admin credentials not found.*\n\nPlease login again with /login', { parse_mode: 'Markdown' });
+          return;
+        }
+        const success = await supabaseService.updateVideoLiveStatus(false, credentials);
         console.log('Disable video result:', success);
         
         if (success) {
@@ -426,7 +450,12 @@ This bot allows you to control your video streaming platform remotely.
 
       try {
         console.log('Attempting to enable video streaming...');
-        const success = await supabaseService.updateVideoLiveStatus(true);
+        const credentials = await getAdminCredentials(chatId);
+        if (!credentials) {
+          await sendMessage(chatId, '❌ *Admin credentials not found.*\n\nPlease login again with /login', { parse_mode: 'Markdown' });
+          return;
+        }
+        const success = await supabaseService.updateVideoLiveStatus(true, credentials);
         console.log('Enable video result:', success);
         
         if (success) {
@@ -482,7 +511,12 @@ This bot allows you to control your video streaming platform remotely.
 
       try {
         console.log('Attempting to clear all messages...');
-        const success = await supabaseService.clearMessages();
+        const credentials = await getAdminCredentials(chatId);
+        if (!credentials) {
+          await sendMessage(chatId, '❌ *Admin credentials not found.*\n\nPlease login again with /login', { parse_mode: 'Markdown' });
+          return;
+        }
+        const success = await supabaseService.clearMessages(credentials);
         console.log('Clear messages result:', success);
         
         if (success) {
@@ -511,9 +545,14 @@ This bot allows you to control your video streaming platform remotely.
       }
 
       try {
+        const credentials = await getAdminCredentials(chatId);
+        if (!credentials) {
+          await sendMessage(chatId, '❌ *Admin credentials not found.*\n\nPlease login again with /login', { parse_mode: 'Markdown' });
+          return;
+        }
         const currentStatus = await supabaseService.getChatStatus();
         const newStatus = !currentStatus;
-        const success = await supabaseService.updateChatStatus(newStatus);
+        const success = await supabaseService.updateChatStatus(newStatus, credentials);
         
         if (success) {
           const statusText = newStatus ? '🟢 Enabled' : '🔴 Disabled';

@@ -37,15 +37,17 @@ class SupabaseService {
     }
   }
 
-  // Perform authenticated operation
-  async performAuthenticatedOperation(operation) {
-    if (!this.adminCredentials) {
-      throw new Error('No admin credentials stored');
+  // Perform authenticated operation with provided credentials
+  async performAuthenticatedOperation(operation, credentials = null) {
+    const authCredentials = credentials || this.adminCredentials;
+    
+    if (!authCredentials) {
+      throw new Error('No admin credentials provided');
     }
 
     try {
-      // Sign in with stored credentials
-      const { data, error } = await this.client.auth.signInWithPassword(this.adminCredentials);
+      // Sign in with provided credentials
+      const { data, error } = await this.client.auth.signInWithPassword(authCredentials);
       
       if (error) {
         console.error('Error signing in for operation:', error);
@@ -73,6 +75,24 @@ class SupabaseService {
   // Clear admin credentials (for logout)
   clearAdminCredentials() {
     this.adminCredentials = null;
+  }
+
+  // Get admin credentials from session (for serverless environment)
+  async getAdminCredentialsFromSession(chatId, sessionStorage) {
+    try {
+      const session = await sessionStorage.getSession(chatId);
+      if (!session || !session.email) {
+        throw new Error('No valid admin session found');
+      }
+      
+      // For security, we need the password. In a production environment,
+      // you might want to store a secure token instead of requiring password each time.
+      // For now, we'll need to pass the credentials from the webhook handler.
+      return { email: session.email };
+    } catch (error) {
+      console.error('Error getting admin credentials from session:', error);
+      throw new Error('Failed to retrieve admin session');
+    }
   }
 
   // Get current video source URL
@@ -105,7 +125,7 @@ class SupabaseService {
   }
 
   // Update video source URL
-  async updateVideoSource(newUrl) {
+  async updateVideoSource(newUrl, credentials = null) {
     try {
       await this.performAuthenticatedOperation(async () => {
         const { data, error } = await this.client
@@ -119,7 +139,7 @@ class SupabaseService {
         }
 
         return data;
-      });
+      }, credentials);
 
       return true;
     } catch (error) {
@@ -157,7 +177,7 @@ class SupabaseService {
   }
 
   // Update video live status
-  async updateVideoLiveStatus(enabled) {
+  async updateVideoLiveStatus(enabled, credentials = null) {
     try {
       await this.performAuthenticatedOperation(async () => {
         const { data, error } = await this.client
@@ -171,7 +191,7 @@ class SupabaseService {
         }
 
         return data;
-      });
+      }, credentials);
 
       return true;
     } catch (error) {
@@ -209,7 +229,7 @@ class SupabaseService {
   }
 
   // Update chat enabled status
-  async updateChatStatus(enabled) {
+  async updateChatStatus(enabled, credentials = null) {
     try {
       await this.performAuthenticatedOperation(async () => {
         const { data, error } = await this.client
@@ -223,7 +243,7 @@ class SupabaseService {
         }
 
         return data;
-      });
+      }, credentials);
 
       return true;
     } catch (error) {
@@ -233,7 +253,7 @@ class SupabaseService {
   }
 
   // Clear all messages
-  async clearMessages() {
+  async clearMessages(credentials = null) {
     try {
       await this.performAuthenticatedOperation(async () => {
         // Use a simple delete with a condition that should match all rows
@@ -246,7 +266,7 @@ class SupabaseService {
           console.error('Error clearing messages:', error);
           throw error;
         }
-      });
+      }, credentials);
 
       return true;
     } catch (error) {
