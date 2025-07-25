@@ -150,6 +150,7 @@ class SessionStorage {
 
       return {
         email: data.email,
+        password: data.password,
         timestamp: data.timestamp
       };
     } catch (error) {
