@@ -1,6 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const config = require('./config');
 const supabaseService = require('./supabase');
+const sessionStorage = require('./session-storage');
 
 // Initialize bot
 const bot = new TelegramBot(config.BOT_TOKEN, { polling: true });
@@ -20,14 +21,8 @@ bot.setMyCommands([
   { command: 'logout', description: 'Logout from admin session' }
 ]);
 
-// Store authenticated admin sessions with timestamps
-const adminSessions = new Map(); // chatId -> { timestamp, email }
-
 // Store user interaction sessions for multi-step processes
 const userSessions = new Map();
-
-// Session timeout (24 hours in milliseconds)
-const SESSION_TIMEOUT = 24 * 60 * 60 * 1000;
 
 // Session states
 const SESSION_STATES = {
@@ -36,24 +31,37 @@ const SESSION_STATES = {
   WAITING_URL: 'waiting_url'
 };
 
+// Function to get admin credentials from session
+async function getAdminCredentials(chatId) {
+  try {
+    const session = await sessionStorage.getSession(chatId);
+    if (!session) {
+      console.log('No session found for chatId:', chatId);
+      throw new Error('No session found');
+    }
+    if (!session.email) {
+      console.log('Session missing email for chatId:', chatId);
+      throw new Error('Session missing email');
+    }
+    if (!session.password) {
+      console.log('Session missing password for chatId:', chatId, '- User needs to login again after schema update');
+      throw new Error('Session missing password - please login again');
+    }
+    return { email: session.email, password: session.password };
+  } catch (error) {
+    console.error('Error getting admin credentials:', error);
+    return null;
+  }
+}
+
 // Utility function to check if user is authenticated admin
-function isAdminAuthenticated(chatId) {
-  const session = adminSessions.get(chatId);
-  if (!session) {
+async function isAdminAuthenticated(chatId) {
+  try {
+    return await sessionStorage.isAuthenticated(chatId);
+  } catch (error) {
+    console.error('Error checking authentication:', error);
     return false;
   }
-  
-  // Check if session has expired
-  const now = Date.now();
-  if (now - session.timestamp > SESSION_TIMEOUT) {
-    // Session expired, remove it
-    adminSessions.delete(chatId);
-    return false;
-  }
-  
-  // Session is valid, update timestamp for activity
-  session.timestamp = now;
-  return true;
 }
 
 // Utility function to create inline keyboard
@@ -172,9 +180,9 @@ bot.onText(/\/help/, async (msg) => {
 bot.onText(/\/login$/, async (msg) => {
   const chatId = msg.chat.id;
 
-  if (isAdminAuthenticated(chatId)) {
+  if (await isAdminAuthenticated(chatId)) {
     // Show admin menu since user is already authenticated
-    const session = adminSessions.get(chatId);
+    const session = await sessionStorage.getSession(chatId);
     const adminKeyboard = createReplyKeyboard([
       [
         { text: '🔴 Disable Video' },
@@ -211,9 +219,9 @@ bot.onText(/\/login\s+(.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const args = match[1];
 
-  if (isAdminAuthenticated(chatId)) {
+  if (await isAdminAuthenticated(chatId)) {
     // Show admin menu since user is already authenticated
-    const session = adminSessions.get(chatId);
+    const session = await sessionStorage.getSession(chatId);
     const adminKeyboard = createReplyKeyboard([
       [
         { text: '🔴 Disable Video' },
@@ -258,14 +266,11 @@ async function performLogin(chatId, email, password) {
     const authResult = await supabaseService.checkAdminAuth(email, password);
     
     if (authResult.success) {
-      // Store session with timestamp and email
-      adminSessions.set(chatId, {
-        timestamp: Date.now(),
-        email: email
-      });
+      // Store session with email and password for persistent admin operations
+      await sessionStorage.setSession(chatId, email, password);
       userSessions.delete(chatId); // Clear any pending session
       console.log('Admin login successful for chatId:', chatId, 'Email:', email);
-      console.log('Admin sessions after login:', Array.from(adminSessions.keys()));
+      
       // Create admin keyboard with buttons
       const adminKeyboard = createReplyKeyboard([
         [
@@ -395,10 +400,8 @@ bot.onText(/\/get_stats/, async (msg) => {
 bot.onText(/\/disable_?video/, async (msg) => {
   const chatId = msg.chat.id;
   console.log('Disable video command received from chatId:', chatId);
-  console.log('Admin sessions:', Array.from(adminSessions));
-  console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
 
-  if (!isAdminAuthenticated(chatId)) {
+  if (!(await isAdminAuthenticated(chatId))) {
     console.log('User not authenticated, sending auth required message');
     await bot.sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
     return;
@@ -406,7 +409,13 @@ bot.onText(/\/disable_?video/, async (msg) => {
 
   console.log('User authenticated, proceeding with disable video');
   try {
-    const success = await supabaseService.updateVideoLiveStatus(false);
+    console.log('Attempting to disable video streaming...');
+    const credentials = await getAdminCredentials(chatId);
+    if (!credentials) {
+      await bot.sendMessage(chatId, '🔄 *Session update required.*\n\nPlease login again with /login to refresh your admin session.', { parse_mode: 'Markdown' });
+      return;
+    }
+    const success = await supabaseService.updateVideoLiveStatus(false, credentials);
     console.log('Update video live status result:', success);
     
     if (success) {
@@ -424,16 +433,21 @@ bot.onText(/\/disable_?video/, async (msg) => {
 bot.onText(/\/enable_?video/, async (msg) => {
   const chatId = msg.chat.id;
   console.log('Enable video command received from chatId:', chatId);
-  console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
 
-  if (!isAdminAuthenticated(chatId)) {
+  if (!(await isAdminAuthenticated(chatId))) {
     console.log('User not authenticated, sending auth required message');
     await bot.sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
     return;
   }
 
   try {
-    const success = await supabaseService.updateVideoLiveStatus(true);
+    console.log('Attempting to enable video streaming...');
+    const credentials = await getAdminCredentials(chatId);
+    if (!credentials) {
+      await bot.sendMessage(chatId, '🔄 *Session update required.*\n\nPlease login again with /login to refresh your admin session.', { parse_mode: 'Markdown' });
+      return;
+    }
+    const success = await supabaseService.updateVideoLiveStatus(true, credentials);
     
     if (success) {
       await bot.sendMessage(chatId, '🟢 *Video streaming enabled successfully!*\n\nUsers can now watch the video stream.', { parse_mode: 'Markdown' });
@@ -450,9 +464,8 @@ bot.onText(/\/enable_?video/, async (msg) => {
 bot.onText(/\/change_?url$/, async (msg) => {
   const chatId = msg.chat.id;
   console.log('Change URL command received from chatId:', chatId);
-  console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
 
-  if (!isAdminAuthenticated(chatId)) {
+  if (!(await isAdminAuthenticated(chatId))) {
     console.log('User not authenticated, sending auth required message');
     await bot.sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
     return;
@@ -468,9 +481,8 @@ bot.onText(/\/change_?url\s+(.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const newUrl = match[1];
   console.log('Change URL command received from chatId:', chatId, 'New URL:', newUrl);
-  console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
 
-  if (!isAdminAuthenticated(chatId)) {
+  if (!(await isAdminAuthenticated(chatId))) {
     console.log('User not authenticated, sending auth required message');
     await bot.sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
     return;
@@ -488,7 +500,13 @@ async function performUrlChange(chatId, newUrl) {
   }
 
   try {
-    const success = await supabaseService.updateVideoSource(newUrl);
+    console.log('Attempting URL change to:', newUrl);
+    const credentials = await getAdminCredentials(chatId);
+    if (!credentials) {
+      await bot.sendMessage(chatId, '🔄 *Session update required.*\n\nPlease login again with /login to refresh your admin session.', { parse_mode: 'Markdown' });
+      return;
+    }
+    const success = await supabaseService.updateVideoSource(newUrl, credentials);
     
     if (success) {
       userSessions.delete(chatId); // Clear any pending session
@@ -506,9 +524,8 @@ async function performUrlChange(chatId, newUrl) {
 bot.onText(/\/clear_?messages/, async (msg) => {
   const chatId = msg.chat.id;
   console.log('Clear messages command received from chatId:', chatId);
-  console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
 
-  if (!isAdminAuthenticated(chatId)) {
+  if (!(await isAdminAuthenticated(chatId))) {
     console.log('User not authenticated, sending auth required message');
     await bot.sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
     return;
@@ -516,7 +533,12 @@ bot.onText(/\/clear_?messages/, async (msg) => {
 
   try {
     console.log('Attempting to clear all messages...');
-    const success = await supabaseService.clearMessages();
+    const credentials = await getAdminCredentials(chatId);
+    if (!credentials) {
+      await bot.sendMessage(chatId, '🔄 *Session update required.*\n\nPlease login again with /login to refresh your admin session.', { parse_mode: 'Markdown' });
+      return;
+    }
+    const success = await supabaseService.clearMessages(credentials);
     console.log('Clear messages result:', success);
     
     if (success) {
@@ -536,18 +558,23 @@ bot.onText(/\/clear_?messages/, async (msg) => {
 bot.onText(/\/toggle_?chat/, async (msg) => {
   const chatId = msg.chat.id;
   console.log('Toggle chat command received from chatId:', chatId);
-  console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
 
-  if (!isAdminAuthenticated(chatId)) {
+  if (!(await isAdminAuthenticated(chatId))) {
     console.log('User not authenticated, sending auth required message');
     await bot.sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
     return;
   }
 
   try {
+    console.log('Attempting to toggle chat status...');
+    const credentials = await getAdminCredentials(chatId);
+    if (!credentials) {
+      await bot.sendMessage(chatId, '🔄 *Session update required.*\n\nPlease login again with /login to refresh your admin session.', { parse_mode: 'Markdown' });
+      return;
+    }
     const currentStatus = await supabaseService.getChatStatus();
     const newStatus = !currentStatus;
-    const success = await supabaseService.updateChatStatus(newStatus);
+    const success = await supabaseService.updateChatStatus(newStatus, credentials);
     
     if (success) {
       const statusText = newStatus ? '🟢 Enabled' : '🔴 Disabled';
