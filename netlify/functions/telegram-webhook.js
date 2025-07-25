@@ -21,8 +21,17 @@ async function isAdminAuthenticated(chatId) {
 async function getAdminCredentials(chatId) {
   try {
     const session = await sessionStorage.getSession(chatId);
-    if (!session || !session.email || !session.password) {
-      throw new Error('No valid admin credentials found in session');
+    if (!session) {
+      console.log('No session found for chatId:', chatId);
+      throw new Error('No session found');
+    }
+    if (!session.email) {
+      console.log('Session missing email for chatId:', chatId);
+      throw new Error('Session missing email');
+    }
+    if (!session.password) {
+      console.log('Session missing password for chatId:', chatId, '- User needs to login again after schema update');
+      throw new Error('Session missing password - please login again');
     }
     return { email: session.email, password: session.password };
   } catch (error) {
@@ -129,7 +138,7 @@ async function performUrlChange(chatId, newUrl) {
     console.log('Attempting URL change to:', newUrl);
     const credentials = await getAdminCredentials(chatId);
     if (!credentials) {
-      await sendMessage(chatId, '❌ *Admin credentials not found.*\n\nPlease login again with /login', { parse_mode: 'Markdown' });
+      await sendMessage(chatId, '🔄 *Session update required.*\n\nPlease login again with /login to refresh your admin session.', { parse_mode: 'Markdown' });
       return;
     }
     const success = await supabaseService.updateVideoSource(newUrl, credentials);
@@ -417,7 +426,7 @@ This bot allows you to control your video streaming platform remotely.
         console.log('Attempting to disable video streaming...');
         const credentials = await getAdminCredentials(chatId);
         if (!credentials) {
-          await sendMessage(chatId, '❌ *Admin credentials not found.*\n\nPlease login again with /login', { parse_mode: 'Markdown' });
+          await sendMessage(chatId, '🔄 *Session update required.*\n\nPlease login again with /login to refresh your admin session.', { parse_mode: 'Markdown' });
           return;
         }
         const success = await supabaseService.updateVideoLiveStatus(false, credentials);
@@ -452,7 +461,7 @@ This bot allows you to control your video streaming platform remotely.
         console.log('Attempting to enable video streaming...');
         const credentials = await getAdminCredentials(chatId);
         if (!credentials) {
-          await sendMessage(chatId, '❌ *Admin credentials not found.*\n\nPlease login again with /login', { parse_mode: 'Markdown' });
+          await sendMessage(chatId, '🔄 *Session update required.*\n\nPlease login again with /login to refresh your admin session.', { parse_mode: 'Markdown' });
           return;
         }
         const success = await supabaseService.updateVideoLiveStatus(true, credentials);
@@ -513,7 +522,7 @@ This bot allows you to control your video streaming platform remotely.
         console.log('Attempting to clear all messages...');
         const credentials = await getAdminCredentials(chatId);
         if (!credentials) {
-          await sendMessage(chatId, '❌ *Admin credentials not found.*\n\nPlease login again with /login', { parse_mode: 'Markdown' });
+          await sendMessage(chatId, '🔄 *Session update required.*\n\nPlease login again with /login to refresh your admin session.', { parse_mode: 'Markdown' });
           return;
         }
         const success = await supabaseService.clearMessages(credentials);
@@ -547,7 +556,7 @@ This bot allows you to control your video streaming platform remotely.
       try {
         const credentials = await getAdminCredentials(chatId);
         if (!credentials) {
-          await sendMessage(chatId, '❌ *Admin credentials not found.*\n\nPlease login again with /login', { parse_mode: 'Markdown' });
+          await sendMessage(chatId, '🔄 *Session update required.*\n\nPlease login again with /login to refresh your admin session.', { parse_mode: 'Markdown' });
           return;
         }
         const currentStatus = await supabaseService.getChatStatus();
