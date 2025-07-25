@@ -13,8 +13,8 @@ const SESSION_STATES = {
 };
 
 // Utility function to check if user is authenticated admin
-function isAdminAuthenticated(chatId) {
-  return sessionStorage.isAuthenticated(chatId);
+async function isAdminAuthenticated(chatId) {
+  return await sessionStorage.isAuthenticated(chatId);
 }
 
 // Utility function to create inline keyboard
@@ -75,7 +75,7 @@ async function performLogin(chatId, email, password) {
     
     if (result.success) {
       // Store session with timestamp and email
-      sessionStorage.setSession(chatId, email);
+      await sessionStorage.setSession(chatId, email);
       
       const adminKeyboard = createReplyKeyboard([
         [
@@ -243,9 +243,10 @@ This bot allows you to control your video streaming platform remotely.
     case '/login':
       if (msg.text.trim() === '/login') {
         // Interactive login
-        if (isAdminAuthenticated(chatId)) {
+        const isAuthenticatedLogin1 = await isAdminAuthenticated(chatId);
+        if (isAuthenticatedLogin1) {
           // Show admin menu since user is already authenticated
-          const session = sessionStorage.getSession(chatId);
+          const session = await sessionStorage.getSession(chatId);
           const adminKeyboard = createReplyKeyboard([
             [
               { text: '🔴 Disable Video' },
@@ -275,9 +276,10 @@ This bot allows you to control your video streaming platform remotely.
         await sendMessage(chatId, '🔑 Admin Login Process\n\nPlease enter your email address:');
       } else {
         // Legacy login format
-        if (isAdminAuthenticated(chatId)) {
+        const isAuthenticatedLogin2 = await isAdminAuthenticated(chatId);
+        if (isAuthenticatedLogin2) {
           // Show admin menu since user is already authenticated
-          const session = sessionStorage.getSession(chatId);
+          const session = await sessionStorage.getSession(chatId);
           const adminKeyboard = createReplyKeyboard([
             [
               { text: '🔴 Disable Video' },
@@ -383,9 +385,10 @@ This bot allows you to control your video streaming platform remotely.
     case '/disable_video':
     case '/disablevideo':
       console.log('Disable video command received from chatId:', chatId);
-      console.log('Admin sessions check - authenticated:', isAdminAuthenticated(chatId));
+      const isAuthenticated = await isAdminAuthenticated(chatId);
+      console.log('Admin sessions check - authenticated:', isAuthenticated);
 
-      if (!isAdminAuthenticated(chatId)) {
+      if (!isAuthenticated) {
         console.log('User not authenticated, sending auth required message');
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
@@ -412,9 +415,10 @@ This bot allows you to control your video streaming platform remotely.
     case '/enable_video':
     case '/enablevideo':
       console.log('Enable video command received from chatId:', chatId);
-      console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
+      const isAuthenticatedEnable = await isAdminAuthenticated(chatId);
+      console.log('Is admin authenticated:', isAuthenticatedEnable);
 
-      if (!isAdminAuthenticated(chatId)) {
+      if (!isAuthenticatedEnable) {
         console.log('User not authenticated, sending auth required message');
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
@@ -441,9 +445,10 @@ This bot allows you to control your video streaming platform remotely.
     case '/change_url':
     case '/changeurl':
       console.log('Change URL command received from chatId:', chatId);
-      console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
+      const isAuthenticatedChangeUrl = await isAdminAuthenticated(chatId);
+      console.log('Is admin authenticated:', isAuthenticatedChangeUrl);
 
-      if (!isAdminAuthenticated(chatId)) {
+      if (!isAuthenticatedChangeUrl) {
         console.log('User not authenticated, sending auth required message');
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
@@ -468,7 +473,8 @@ This bot allows you to control your video streaming platform remotely.
     case '/clearmessages':
       console.log('Clear messages command received from chatId:', chatId);
       
-      if (!isAdminAuthenticated(chatId)) {
+      const isAuthenticatedClear = await isAdminAuthenticated(chatId);
+      if (!isAuthenticatedClear) {
         console.log('User not authenticated, sending auth required message');
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
@@ -495,9 +501,10 @@ This bot allows you to control your video streaming platform remotely.
     case '/toggle_chat':
     case '/togglechat':
       console.log('Toggle chat command received from chatId:', chatId);
-      console.log('Is admin authenticated:', isAdminAuthenticated(chatId));
+      const isAuthenticatedToggle = await isAdminAuthenticated(chatId);
+      console.log('Is admin authenticated:', isAuthenticatedToggle);
 
-      if (!isAdminAuthenticated(chatId)) {
+      if (!isAuthenticatedToggle) {
         console.log('User not authenticated, sending auth required message');
         await sendMessage(chatId, '🔐 *Admin authentication required.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
@@ -523,26 +530,20 @@ This bot allows you to control your video streaming platform remotely.
     case '/logout':
       console.log('Logout command received from chatId:', chatId);
       
-      if (!isAdminAuthenticated(chatId)) {
+      const isAuthenticatedLogout = await isAdminAuthenticated(chatId);
+      if (!isAuthenticatedLogout) {
         await sendMessage(chatId, '❌ *You are not logged in.*\n\nUse /login to authenticate first.', { parse_mode: 'Markdown' });
         return;
       }
       
       // Remove session
-      sessionStorage.removeSession(chatId);
+      await sessionStorage.removeSession(chatId);
       
       // Show public keyboard
       const publicKeyboard = createReplyKeyboard([
         [
           { text: '🔐 Admin Login' },
           { text: '❓ Help & Commands' }
-        ],
-        [
-          { text: '📊 Platform Status' },
-          { text: '🔗 Get Video URL' }
-        ],
-        [
-          { text: '📈 Statistics' }
         ]
       ]);
       
